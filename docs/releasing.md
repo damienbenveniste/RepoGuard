@@ -123,3 +123,15 @@ Prefer the GitHub Release path for normal versioned releases. Manual workflow
 dispatch is for release recovery only.
 
 Homebrew formula automation is planned after PyPI installation is stable.
+
+## Documentation Deployment
+
+Documentation is published to GitHub Pages at:
+
+```text
+https://damienbenveniste.github.io/ScaffoldGuard/
+```
+
+The `Deploy Docs` workflow builds MkDocs and deploys the generated `site/`
+artifact when documentation-related files change on `main`. The repository Pages
+source must remain set to GitHub Actions.

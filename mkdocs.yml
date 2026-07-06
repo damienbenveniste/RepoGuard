@@ -1,6 +1,9 @@
 site_name: ScaffoldGuard
 site_description: Generate guarded Python project starters for coding agents.
+site_url: https://damienbenveniste.github.io/ScaffoldGuard/
 repo_name: scaffold-guard
+repo_url: https://github.com/damienbenveniste/ScaffoldGuard
+edit_uri: edit/main/docs/
 theme:
   name: material
 nav:

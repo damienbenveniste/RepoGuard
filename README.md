@@ -8,6 +8,8 @@ Cursor.
 The PyPI package is `scaffold-guard`; the installed command is
 `scaffold-guard`.
 
+Documentation: <https://damienbenveniste.github.io/ScaffoldGuard/>
+
 ## Install
 
 ```bash
