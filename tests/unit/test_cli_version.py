@@ -2,8 +2,8 @@
 
 from typer.testing import CliRunner
 
-from repo_guard import __version__
-from repo_guard.cli import app
+from scaffold_guard import __version__
+from scaffold_guard.cli import app
 
 SUCCESS = 0
 

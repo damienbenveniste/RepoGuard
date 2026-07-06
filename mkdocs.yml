@@ -1,6 +1,6 @@
-site_name: RepoGuard
+site_name: ScaffoldGuard
 site_description: Generate guarded Python project starters for coding agents.
-repo_name: repo-guard
+repo_name: scaffold-guard
 theme:
   name: material
 nav:

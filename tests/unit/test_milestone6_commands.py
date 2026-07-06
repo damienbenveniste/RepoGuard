@@ -8,24 +8,24 @@ from typing import NoReturn, cast
 import pytest
 from typer.testing import CliRunner
 
-import repo_guard.compile_rules as compile_rules_module
-from repo_guard import doctor, validation
-from repo_guard.checks.base import CheckConfigurationError
-from repo_guard.cli import app
-from repo_guard.compile_rules import (
+import scaffold_guard.compile_rules as compile_rules_module
+from scaffold_guard import doctor, validation
+from scaffold_guard.checks.base import CheckConfigurationError
+from scaffold_guard.cli import app
+from scaffold_guard.compile_rules import (
     GENERATED_MARKER,
     compile_rules,
     selected_agent_files,
 )
-from repo_guard.doctor import run_doctor
-from repo_guard.models import AgentChoice, InitOptions
-from repo_guard.project_config import (
+from scaffold_guard.doctor import run_doctor
+from scaffold_guard.models import AgentChoice, InitOptions
+from scaffold_guard.project_config import (
     GeneratedProjectConfig,
     ProjectConfigError,
     load_generated_project_config,
 )
-from repo_guard.scaffold import RenderedFile, build_init_options, scaffold_package_project
-from repo_guard.validation import CommandStatus, validation_commands
+from scaffold_guard.scaffold import RenderedFile, build_init_options, scaffold_package_project
+from scaffold_guard.validation import CommandStatus, validation_commands
 
 SUCCESS = 0
 COMMAND_FAILED = 1
@@ -64,9 +64,9 @@ def test_generated_project_config_round_trips_agent_selection(
 
 
 def test_generated_project_config_rejects_missing_required_fields(tmp_path: Path) -> None:
-    """Generated-project-only commands require a complete repo-guard.toml."""
+    """Generated-project-only commands require a complete scaffold-guard.toml."""
     project_dir = _generated_project(tmp_path)
-    (project_dir / "repo-guard.toml").write_text(
+    (project_dir / "scaffold-guard.toml").write_text(
         "[project]\nname = 'demo'\n",
         encoding="utf-8",
     )
@@ -80,7 +80,7 @@ def test_generated_project_config_rejects_bad_profile_and_missing_coverage(
 ) -> None:
     """Generated config validation reports unsupported profiles and missing integers."""
     project_dir = _generated_project(tmp_path)
-    config_path = project_dir / "repo-guard.toml"
+    config_path = project_dir / "scaffold-guard.toml"
     original = config_path.read_text(encoding="utf-8")
 
     _replace_text(config_path, 'profile = "package"', 'profile = "application"')
@@ -213,7 +213,7 @@ def test_validation_commands_are_fixed_for_quick_and_full_profiles(tmp_path: Pat
         ("uv", "run", "ruff", "format", "--check", "."),
         ("uv", "run", "ruff", "check", "."),
         ("uv", "run", "pytest", "tests/unit"),
-        ("repo-guard", "check"),
+        ("scaffold-guard", "check"),
     )
     assert ("uv", "run", "mypy", "src", "tests", "examples") in full
     assert (
@@ -266,7 +266,7 @@ def test_validate_quick_json_stops_on_first_failing_command(
     ]
 
 
-def test_validate_quick_text_includes_repo_guard_check(
+def test_validate_quick_text_includes_scaffold_guard_check(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -285,8 +285,8 @@ def test_validate_quick_text_includes_repo_guard_check(
     result = CliRunner().invoke(app, ["validate", "--path", str(project_dir), "--quick"])
 
     assert result.exit_code == SUCCESS, result.output
-    assert "repo-guard validate: ok" in result.output
-    assert "- repo-guard check: ok" in result.output
+    assert "scaffold-guard validate: ok" in result.output
+    assert "- scaffold-guard check: ok" in result.output
     assert calls == [
         ("uv", "run", "ruff", "format", "--check", "."),
         ("uv", "run", "ruff", "check", "."),
@@ -322,7 +322,7 @@ def test_validation_runner_reports_missing_executable(
         assert quick
         return (("missing-tool", "--version"),)
 
-    monkeypatch.setattr("repo_guard.validation.shutil.which", fake_which)
+    monkeypatch.setattr("scaffold_guard.validation.shutil.which", fake_which)
     monkeypatch.setattr(validation, "validation_commands", fake_validation_commands)
 
     report = validation.run_validation(project_dir, quick=True, capture=True)
@@ -360,7 +360,7 @@ def test_validation_runner_captures_subprocess_output(
     assert report.exit_code == SUCCESS
 
 
-def test_validation_reports_repo_guard_check_configuration_errors(
+def test_validation_reports_scaffold_guard_check_configuration_errors(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -374,7 +374,7 @@ def test_validation_reports_repo_guard_check_configuration_errors(
     ) -> tuple[tuple[str, ...], ...]:
         assert config.package == "demo"
         assert quick
-        return (("repo-guard", "check"),)
+        return (("scaffold-guard", "check"),)
 
     def fake_run_checks(root: Path) -> NoReturn:
         assert root == project_dir
@@ -390,7 +390,7 @@ def test_validation_reports_repo_guard_check_configuration_errors(
     assert status.stderr == "bad check config"
 
 
-def test_validation_reports_repo_guard_check_policy_failures(
+def test_validation_reports_scaffold_guard_check_policy_failures(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -405,7 +405,7 @@ def test_validation_reports_repo_guard_check_policy_failures(
     ) -> tuple[tuple[str, ...], ...]:
         assert config.package == "demo"
         assert quick
-        return (("repo-guard", "check"),)
+        return (("scaffold-guard", "check"),)
 
     monkeypatch.setattr(validation, "validation_commands", fake_validation_commands)
 
@@ -431,7 +431,7 @@ def test_doctor_report_allows_git_repository_warning(
         assert root == project_dir
         return False
 
-    monkeypatch.setattr("repo_guard.doctor.shutil.which", fake_which)
+    monkeypatch.setattr("scaffold_guard.doctor.shutil.which", fake_which)
     monkeypatch.setattr(doctor, "_run_git", fake_run_git)
 
     report = run_doctor(project_dir)
@@ -440,7 +440,7 @@ def test_doctor_report_allows_git_repository_warning(
 
     assert report.ok
     assert payload["ok"] is True
-    assert checks["repo-guard-config"].ok
+    assert checks["scaffold-guard-config"].ok
     assert checks["git-repository"].severity == "warning"
     assert not checks["git-repository"].ok
 
@@ -456,7 +456,7 @@ def test_doctor_cli_json_reports_missing_generated_config(tmp_path: Path) -> Non
 
     assert result.exit_code == COMMAND_FAILED
     assert payload["ok"] is False
-    assert any(check["id"] == "repo-guard-config" and not check["ok"] for check in checks)
+    assert any(check["id"] == "scaffold-guard-config" and not check["ok"] for check in checks)
 
 
 def test_doctor_text_reports_successful_generated_project(
@@ -474,14 +474,14 @@ def test_doctor_text_reports_successful_generated_project(
         assert root == project_dir
         return True
 
-    monkeypatch.setattr("repo_guard.doctor.shutil.which", fake_which)
+    monkeypatch.setattr("scaffold_guard.doctor.shutil.which", fake_which)
     monkeypatch.setattr(doctor, "_run_git", fake_run_git)
 
     result = CliRunner().invoke(app, ["doctor", "--path", str(project_dir)])
 
     assert result.exit_code == SUCCESS, result.output
-    assert "repo-guard doctor: ok" in result.output
-    assert "- repo-guard-config: ok" in result.output
+    assert "scaffold-guard doctor: ok" in result.output
+    assert "- scaffold-guard-config: ok" in result.output
 
 
 def test_doctor_detects_invalid_pyproject(tmp_path: Path) -> None:
@@ -510,7 +510,7 @@ def test_doctor_omits_disabled_adapter_and_ci_checks(
     """Doctor only checks generated adapters and CI selected by config."""
     project_dir = _generated_project(tmp_path, agent="codex")
     _replace_text(
-        project_dir / "repo-guard.toml",
+        project_dir / "scaffold-guard.toml",
         "github_actions = true",
         "github_actions = false",
     )
@@ -523,7 +523,7 @@ def test_doctor_omits_disabled_adapter_and_ci_checks(
         assert root == project_dir
         return True
 
-    monkeypatch.setattr("repo_guard.doctor.shutil.which", fake_which)
+    monkeypatch.setattr("scaffold_guard.doctor.shutil.which", fake_which)
     monkeypatch.setattr(doctor, "_run_git", fake_run_git)
 
     report = run_doctor(project_dir)
@@ -546,7 +546,7 @@ def test_doctor_warns_when_git_is_unavailable(
             return None
         return f"/usr/bin/{name}"
 
-    monkeypatch.setattr("repo_guard.doctor.shutil.which", fake_which)
+    monkeypatch.setattr("scaffold_guard.doctor.shutil.which", fake_which)
 
     project_dir = _generated_project(tmp_path)
     report = run_doctor(project_dir)

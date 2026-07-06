@@ -1,28 +1,28 @@
-# RepoGuard
+# ScaffoldGuard
 
-`repo-guard` generates strict Python starter repositories for teams using
+`scaffold-guard` generates strict Python starter repositories for teams using
 coding agents. It creates a typed package layout, local validation commands,
 GitHub Actions workflows, and agent instructions for Codex, Claude Code, and
 Cursor.
 
-The PyPI package and `uvx` entrypoint are `agent-ready-python`; the canonical
-installed command is `repo-guard`.
+The PyPI package and `uvx` entrypoint are `scaffold-guard`; the canonical
+installed command is `scaffold-guard`.
 
 ## Install
 
 After the package is published to PyPI:
 
 ```bash
-uvx agent-ready-python version
+uvx scaffold-guard version
 ```
 
 From a local checkout or built wheel:
 
 ```bash
 uv sync --all-groups
-uv run repo-guard version
+uv run scaffold-guard version
 uv build
-uvx --from dist/agent_ready_python-0.1.0-py3-none-any.whl agent-ready-python version
+uvx --from dist/scaffold_guard-0.1.0-py3-none-any.whl scaffold-guard version
 ```
 
 ## Publishing
@@ -31,9 +31,9 @@ PyPI publishing is prepared through GitHub Actions Trusted Publishing. Before
 the first release, configure a PyPI pending publisher for:
 
 ```text
-Project name: agent-ready-python
+Project name: scaffold-guard
 Owner: damienbenveniste
-Repository: RepoGuard
+Repository: ScaffoldGuard
 Workflow: publish.yml
 Environment: pypi
 ```
@@ -46,19 +46,19 @@ GitHub Release or manually run the `Publish` workflow from `main`.
 Generate a project with every supported adapter:
 
 ```bash
-uvx agent-ready-python init my_project --agent all
+uvx scaffold-guard init my_project --agent all
 cd my_project
 uv sync --all-groups
-uv run repo-guard check
-uv run repo-guard validate --quick
+uv run scaffold-guard check
+uv run scaffold-guard validate --quick
 ```
 
 Generate for one agent surface:
 
 ```bash
-uvx agent-ready-python init codex_demo --agent codex
-uvx agent-ready-python init claude_demo --agent claude
-uvx agent-ready-python init cursor_demo --agent cursor
+uvx scaffold-guard init codex_demo --agent codex
+uvx scaffold-guard init claude_demo --agent claude
+uvx scaffold-guard init cursor_demo --agent cursor
 ```
 
 Use `--dry-run` to preview files and `--force` to overwrite known generated
@@ -75,7 +75,7 @@ my_project/
   LICENSE
   pyproject.toml
   pyrightconfig.json
-  repo-guard.toml
+  scaffold-guard.toml
   .github/workflows/
   docs/
   examples/
@@ -96,13 +96,13 @@ Adapter files are added according to `--agent`:
 ## Commands
 
 ```bash
-repo-guard init NAME [--agent codex|claude|cursor|all]
-repo-guard check [--path .] [--json]
-repo-guard inspect-diff [--path .] [--base main] [--json]
-repo-guard validate [--path .] [--quick] [--json]
-repo-guard compile-rules [--path .] [--agent codex|claude|cursor|all] [--dry-run] [--force]
-repo-guard doctor [--path .] [--json]
-repo-guard version
+scaffold-guard init NAME [--agent codex|claude|cursor|all]
+scaffold-guard check [--path .] [--json]
+scaffold-guard inspect-diff [--path .] [--base main] [--json]
+scaffold-guard validate [--path .] [--quick] [--json]
+scaffold-guard compile-rules [--path .] [--agent codex|claude|cursor|all] [--dry-run] [--force]
+scaffold-guard doctor [--path .] [--json]
+scaffold-guard version
 ```
 
 `check` runs fast policy checks. `inspect-diff` explains validation obligations
@@ -121,7 +121,7 @@ uv run ruff format --check .
 uv run ruff check .
 uv run mypy src tests
 uv run pyright
-uv run pytest tests --cov=repo_guard --cov-report=term-missing --cov-fail-under=95
+uv run pytest tests --cov=scaffold_guard --cov-report=term-missing --cov-fail-under=95
 uv run mkdocs build --strict
 uv build
 ```

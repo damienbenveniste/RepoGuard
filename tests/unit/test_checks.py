@@ -5,16 +5,16 @@ from pathlib import Path
 
 import pytest
 
-from repo_guard.adapters.base import adapters_for
-from repo_guard.checks.base import CheckConfigurationError, CheckResult, finding
-from repo_guard.checks.config import ci_enabled, docs_enabled, table_value
-from repo_guard.checks.config_consistency import check_config_consistency
-from repo_guard.checks.files import gitignore_entries, iter_text_files
-from repo_guard.checks.generated_files import check_generated_files
-from repo_guard.checks.project_health import check_project_health
-from repo_guard.checks.runner import run_checks
-from repo_guard.checks.unsafe_patterns import check_unsafe_patterns
-from repo_guard.scaffold import build_init_options, scaffold_package_project
+from scaffold_guard.adapters.base import adapters_for
+from scaffold_guard.checks.base import CheckConfigurationError, CheckResult, finding
+from scaffold_guard.checks.config import ci_enabled, docs_enabled, table_value
+from scaffold_guard.checks.config_consistency import check_config_consistency
+from scaffold_guard.checks.files import gitignore_entries, iter_text_files
+from scaffold_guard.checks.generated_files import check_generated_files
+from scaffold_guard.checks.project_health import check_project_health
+from scaffold_guard.checks.runner import run_checks
+from scaffold_guard.checks.unsafe_patterns import check_unsafe_patterns
+from scaffold_guard.scaffold import build_init_options, scaffold_package_project
 
 
 def test_check_result_ok_ignores_warnings() -> None:
@@ -169,9 +169,9 @@ def test_project_health_detects_missing_agents_file(tmp_path: Path) -> None:
 def test_project_health_respects_disabled_docs_and_ci(tmp_path: Path) -> None:
     """Docs and CI paths are not required when disabled in config."""
     project_dir = _generated_project(tmp_path)
-    _replace_text(project_dir / "repo-guard.toml", "docs = true", "docs = false")
+    _replace_text(project_dir / "scaffold-guard.toml", "docs = true", "docs = false")
     _replace_text(
-        project_dir / "repo-guard.toml",
+        project_dir / "scaffold-guard.toml",
         "github_actions = true",
         "github_actions = false",
     )
@@ -266,7 +266,7 @@ def test_generated_files_allows_missing_optional_generated_files(tmp_path: Path)
     _remove_tree(project_dir / ".github")
     _remove_tree(project_dir / ".cursor")
     _replace_text(
-        project_dir / "repo-guard.toml",
+        project_dir / "scaffold-guard.toml",
         "github_actions = true",
         "github_actions = false",
     )
@@ -277,14 +277,14 @@ def test_generated_files_allows_missing_optional_generated_files(tmp_path: Path)
 
 
 def test_config_consistency_detects_missing_config(tmp_path: Path) -> None:
-    """Generated projects must keep repo-guard.toml."""
+    """Generated projects must keep scaffold-guard.toml."""
     project_dir = _generated_project(tmp_path)
-    (project_dir / "repo-guard.toml").unlink()
+    (project_dir / "scaffold-guard.toml").unlink()
 
     result = check_config_consistency(project_dir)
 
     assert not result.ok
-    assert any(finding.code == "missing-repo-guard-config" for finding in result.findings)
+    assert any(finding.code == "missing-scaffold-guard-config" for finding in result.findings)
 
 
 def test_config_consistency_detects_agent_file_mismatches(tmp_path: Path) -> None:

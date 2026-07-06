@@ -4,14 +4,14 @@ from pathlib import Path
 
 import pytest
 
-from repo_guard.diffing import (
+from scaffold_guard.diffing import (
     DiffInspectionError,
     ProjectValidationSettings,
     classify_changed_files,
     inspect_diff,
     load_project_validation_settings,
 )
-from repo_guard.scaffold import build_init_options, scaffold_package_project
+from scaffold_guard.scaffold import build_init_options, scaffold_package_project
 
 
 def test_source_change_requires_tests_validation_and_docs_evidence(tmp_path: Path) -> None:
@@ -83,7 +83,7 @@ def test_pyproject_change_warns_when_lockfile_exists_but_is_not_changed(tmp_path
     assert "pyproject.toml changed while uv.lock exists but is not in the diff." in report.warnings
 
 
-def test_agent_rule_change_requires_repo_guard_check(tmp_path: Path) -> None:
+def test_agent_rule_change_requires_scaffold_guard_check(tmp_path: Path) -> None:
     """Agent instruction changes require policy validation."""
     root = _generated_project(tmp_path)
 
@@ -94,7 +94,7 @@ def test_agent_rule_change_requires_repo_guard_check(tmp_path: Path) -> None:
         settings=ProjectValidationSettings(package_name="demo", coverage=95),
     )
 
-    assert report.required_validation == ("uv run repo-guard check",)
+    assert report.required_validation == ("uv run scaffold-guard check",)
     assert (
         "agent rules regenerated or rule compilation was not required" in report.required_evidence
     )
@@ -140,7 +140,7 @@ def test_no_changes_have_no_required_actions(tmp_path: Path) -> None:
 
 
 def test_load_project_validation_settings_reads_generated_config(tmp_path: Path) -> None:
-    """Generated `repo-guard.toml` feeds project-specific command hints."""
+    """Generated `scaffold-guard.toml` feeds project-specific command hints."""
     root = _generated_project(tmp_path)
 
     settings = load_project_validation_settings(root)

@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from repo_guard.models import InitOptions
+from scaffold_guard.models import InitOptions
 
 
 def test_init_options_agent_flags_for_all() -> None:

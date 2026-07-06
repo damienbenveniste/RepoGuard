@@ -5,12 +5,12 @@ configuration change in this repository.
 
 ## Product Orientation
 
-- Build `repo-guard`: a PyPI-installable Python CLI that generates strict
+- Build `scaffold-guard`: a PyPI-installable Python CLI that generates strict
   Python starter repositories designed for safe coding-agent collaboration.
 - Preserve the V1 promise: generate a Python project with clear agent
   instructions, strict local tooling, GitHub Actions CI, and policy checks that
   catch common agent mistakes.
-- Treat `repo_guard_v1_implementation_plan.md` as the source of current
+- Treat `scaffold_guard_v1_implementation_plan.md` as the source of current
   product scope and acceptance criteria until the plan is moved into formal docs.
 - Keep V1 focused on a developer CLI. Do not add a SaaS dashboard, telemetry,
   external AI calls, complex YAML DSL, plugin ecosystem, publish automation, or
@@ -104,7 +104,7 @@ configuration change in this repository.
 - Cursor `.mdc` files must include valid frontmatter with `description`,
   `alwaysApply`, and `globs` where appropriate.
 - Generated agent instruction files should be concise, serious, and enforceable
-  through `repo-guard check` and CI where possible.
+  through `scaffold-guard check` and CI where possible.
 - Use generated markers and checksums or clearly documented overwrite rules for
   files managed by `compile-rules`.
 - Keep template rendering deterministic. Tests should not depend on wall-clock
@@ -184,16 +184,16 @@ uv run ruff format --check .
 uv run ruff check .
 uv run mypy src tests
 uv run pyright
-uv run pytest tests --cov=repo_guard --cov-report=term-missing --cov-fail-under=95
+uv run pytest tests --cov=scaffold_guard --cov-report=term-missing --cov-fail-under=95
 uv run mkdocs build --strict
 ```
 
 Generated projects should be validated with their configured commands:
 
 ```bash
-uv run repo-guard check
-uv run repo-guard inspect-diff
-uv run repo-guard validate
+uv run scaffold-guard check
+uv run scaffold-guard inspect-diff
+uv run scaffold-guard validate
 ```
 
 Do not report completion if a required check fails. Fix the failure or clearly

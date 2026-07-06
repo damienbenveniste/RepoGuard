@@ -1,6 +1,6 @@
 # Releasing
 
-This page documents the release checklist for `repo-guard` itself. Do not
+This page documents the release checklist for `scaffold-guard` itself. Do not
 publish until the full gate is green, the wheel has been inspected, and PyPI
 Trusted Publishing is configured.
 
@@ -12,7 +12,7 @@ uv run ruff format --check .
 uv run ruff check .
 uv run mypy src tests
 uv run pyright
-uv run pytest tests --cov=repo_guard --cov-report=term-missing --cov-fail-under=95
+uv run pytest tests --cov=scaffold_guard --cov-report=term-missing --cov-fail-under=95
 uv run mkdocs build --strict
 uv build
 ```
@@ -20,25 +20,25 @@ uv build
 ## Inspect The Wheel
 
 ```bash
-python -m zipfile -l dist/agent_ready_python-0.1.0-py3-none-any.whl | grep templates
-uvx --from dist/agent_ready_python-0.1.0-py3-none-any.whl agent-ready-python version
+python -m zipfile -l dist/scaffold_guard-0.1.0-py3-none-any.whl | grep templates
+uvx --from dist/scaffold_guard-0.1.0-py3-none-any.whl scaffold-guard version
 ```
 
-The wheel must include the packaged templates under `repo_guard/templates/`.
+The wheel must include the packaged templates under `scaffold_guard/templates/`.
 
 ## Configure PyPI
 
 Before the first upload, create a PyPI pending publisher with these values:
 
 ```text
-Project name: agent-ready-python
+Project name: scaffold-guard
 Owner: damienbenveniste
-Repository: RepoGuard
+Repository: ScaffoldGuard
 Workflow: publish.yml
 Environment: pypi
 ```
 
-RepoGuard publishes with PyPI Trusted Publishing from GitHub Actions. Do not add
+ScaffoldGuard publishes with PyPI Trusted Publishing from GitHub Actions. Do not add
 a PyPI API token or username/password secret for the release workflow.
 
 ## Publish

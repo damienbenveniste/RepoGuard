@@ -1,11 +1,11 @@
 [project]
-name = "agent-ready-python"
+name = "scaffold-guard"
 version = "0.1.0"
 description = "Generate guarded Python project starters for Codex, Claude Code, and Cursor."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
-keywords = ["agents", "codex", "cursor", "claude", "scaffold", "repo-guard", "agent-ready-python"]
+keywords = ["agents", "codex", "cursor", "claude", "scaffold", "scaffold-guard"]
 authors = [
     { name = "Damien Benveniste" },
 ]
@@ -31,14 +31,13 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/damienbenveniste/RepoGuard"
-Repository = "https://github.com/damienbenveniste/RepoGuard"
-Issues = "https://github.com/damienbenveniste/RepoGuard/issues"
-Documentation = "https://github.com/damienbenveniste/RepoGuard#readme"
+Homepage = "https://github.com/damienbenveniste/ScaffoldGuard"
+Repository = "https://github.com/damienbenveniste/ScaffoldGuard"
+Issues = "https://github.com/damienbenveniste/ScaffoldGuard/issues"
+Documentation = "https://github.com/damienbenveniste/ScaffoldGuard#readme"
 
 [project.scripts]
-agent-ready-python = "repo_guard.cli:app"
-repo-guard = "repo_guard.cli:app"
+scaffold-guard = "scaffold_guard.cli:app"
 
 [dependency-groups]
 dev = [
@@ -56,7 +55,7 @@ requires = ["hatchling>=1.27.0"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/repo_guard"]
+packages = ["src/scaffold_guard"]
 
 [tool.ruff]
 target-version = "py311"
@@ -120,7 +119,7 @@ addopts = [
 
 [tool.coverage.run]
 branch = true
-source = ["repo_guard"]
+source = ["scaffold_guard"]
 
 [tool.coverage.report]
 fail_under = 95

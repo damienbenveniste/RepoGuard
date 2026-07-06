@@ -10,7 +10,7 @@ my_project/
   LICENSE
   pyproject.toml
   pyrightconfig.json
-  repo-guard.toml
+  scaffold-guard.toml
   .github/workflows/ci.yml
   .github/workflows/docs.yml
   docs/index.md
@@ -32,7 +32,7 @@ CLAUDE.md
 
 ## Configuration
 
-`repo-guard.toml` stores the fields V1 commands need:
+`scaffold-guard.toml` stores the fields V1 commands need:
 
 - project name and import package;
 - selected agent adapters;
@@ -49,9 +49,9 @@ Generated projects are expected to run:
 
 ```bash
 uv sync --all-groups
-uv run repo-guard check
-uv run repo-guard validate --quick
-uv run repo-guard validate
+uv run scaffold-guard check
+uv run scaffold-guard validate --quick
+uv run scaffold-guard validate
 ```
 
 Use `inspect-diff` inside a git repository to understand which checks are
