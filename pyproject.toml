@@ -34,7 +34,7 @@ dependencies = [
 Homepage = "https://github.com/damienbenveniste/ScaffoldGuard"
 Repository = "https://github.com/damienbenveniste/ScaffoldGuard"
 Issues = "https://github.com/damienbenveniste/ScaffoldGuard/issues"
-Documentation = "https://github.com/damienbenveniste/ScaffoldGuard#readme"
+Documentation = "https://damienbenveniste.github.io/ScaffoldGuard/"
 
 [project.scripts]
 scaffold-guard = "scaffold_guard.cli:app"

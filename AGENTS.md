@@ -149,6 +149,9 @@ configuration change in this repository.
 
 - Keep `README.md`, docs, examples, generated templates, tests, and package
   behavior synchronized in the same change.
+- Documentation is published to GitHub Pages with the `Deploy Docs` workflow.
+  Keep `mkdocs.yml`, the README documentation link, and package metadata
+  synchronized with `https://damienbenveniste.github.io/ScaffoldGuard/`.
 - Update docs when public commands, package layout, configuration, validation
   behavior, generated output, adapter support, or developer workflows change.
 - Never document aspirational behavior as if it works today. Future behavior
