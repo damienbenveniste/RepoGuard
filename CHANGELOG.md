@@ -10,3 +10,5 @@
   diagnostics, and rule regeneration.
 - Added release-readiness documentation and wheel template inclusion checks.
 - Added Python 3.14 CI coverage and PyPI Trusted Publishing release automation.
+- Updated repository and generated-project GitHub Actions to current action
+  releases.
