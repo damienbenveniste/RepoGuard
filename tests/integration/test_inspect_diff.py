@@ -1,4 +1,4 @@
-"""Integration tests for `agent-safe inspect-diff`."""
+"""Integration tests for `repo-guard inspect-diff`."""
 
 import asyncio
 import json
@@ -10,7 +10,7 @@ from typing import cast
 import pytest
 from typer.testing import CliRunner
 
-from agent_safe.cli import app
+from repo_guard.cli import app
 
 SUCCESS = 0
 CONFIG_ERROR = 2
@@ -100,7 +100,7 @@ def test_inspect_diff_agent_rule_requires_check(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Agent rule diffs require `agent-safe check`."""
+    """Agent rule diffs require `repo-guard check`."""
     monkeypatch.chdir(tmp_path)
     project_dir = _init_git_project(tmp_path)
     agents_path = project_dir / "AGENTS.md"
@@ -113,7 +113,7 @@ def test_inspect_diff_agent_rule_requires_check(
 
     assert result.exit_code == SUCCESS, result.output
     assert "agent instructions: AGENTS.md" in result.output
-    assert "uv run agent-safe check" in result.output
+    assert "uv run repo-guard check" in result.output
 
 
 def test_inspect_diff_non_git_path_exits_with_configuration_error(tmp_path: Path) -> None:
@@ -131,7 +131,7 @@ def _init_git_project(tmp_path: Path) -> Path:
     project_dir = tmp_path / "demo"
     _git(project_dir, "init")
     _git(project_dir, "config", "user.email", "agent@example.com")
-    _git(project_dir, "config", "user.name", "Agent Safe")
+    _git(project_dir, "config", "user.name", "RepoGuard")
     _git(project_dir, "add", ".")
     _git(project_dir, "commit", "-m", "initial")
     return project_dir

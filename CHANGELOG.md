@@ -2,7 +2,7 @@
 
 ## 0.1.0 - Unreleased
 
-- Added the `agent-safe` CLI with `init`, `check`, `inspect-diff`, `validate`,
+- Added the `repo-guard` CLI with `init`, `check`, `inspect-diff`, `validate`,
   `compile-rules`, `doctor`, and `version`.
 - Added package-profile project generation with Codex, Claude Code, and Cursor
   adapter files.

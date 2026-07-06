@@ -2,8 +2,8 @@
 
 from typer.testing import CliRunner
 
-from agent_safe import __version__
-from agent_safe.cli import app
+from repo_guard import __version__
+from repo_guard.cli import app
 
 SUCCESS = 0
 

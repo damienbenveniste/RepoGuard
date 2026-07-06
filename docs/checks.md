@@ -1,10 +1,10 @@
 # Checks
 
-`agent-safe check` runs fast local checks that do not execute the full project
+`repo-guard check` runs fast local checks that do not execute the full project
 test suite.
 
 ```bash
-agent-safe check [--path .] [--json]
+repo-guard check [--path .] [--json]
 ```
 
 Exit codes:
@@ -42,7 +42,7 @@ placeholders, valid Cursor frontmatter, README `uv` commands, and CI commands.
 
 ### config-consistency
 
-Compares `agent-safe.toml` against generated files and package configuration.
+Compares `repo-guard.toml` against generated files and package configuration.
 It detects agent adapter mismatches, Python version mismatches, coverage
 mismatches, and stale lockfiles when a lockfile exists.
 
@@ -51,5 +51,5 @@ mismatches, and stale lockfiles when a lockfile exists.
 Use `--json` when a script or CI job needs stable output:
 
 ```bash
-agent-safe check --json
+repo-guard check --json
 ```

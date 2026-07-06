@@ -1,7 +1,7 @@
 [project]
-name = "agent-safe-python"
+name = "repo-guard"
 version = "0.1.0"
-description = "Generate agent-safe Python project starters for Codex, Claude Code, and Cursor."
+description = "Generate guarded Python project starters for Codex, Claude Code, and Cursor."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.scripts]
-agent-safe = "agent_safe.cli:app"
+repo-guard = "repo_guard.cli:app"
 
 [dependency-groups]
 dev = [
@@ -34,7 +34,7 @@ requires = ["hatchling>=1.27.0"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/agent_safe"]
+packages = ["src/repo_guard"]
 
 [tool.ruff]
 target-version = "py311"
@@ -98,7 +98,7 @@ addopts = [
 
 [tool.coverage.run]
 branch = true
-source = ["agent_safe"]
+source = ["repo_guard"]
 
 [tool.coverage.report]
 fail_under = 95

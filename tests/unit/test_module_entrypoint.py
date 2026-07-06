@@ -2,11 +2,11 @@
 
 import pytest
 
-import agent_safe.__main__ as agent_main
+import repo_guard.__main__ as agent_main
 
 
 def test_main_delegates_to_typer_app(monkeypatch: pytest.MonkeyPatch) -> None:
-    """`python -m agent_safe` uses the same Typer application."""
+    """`python -m repo_guard` uses the same Typer application."""
     called = False
 
     def fake_app() -> None:

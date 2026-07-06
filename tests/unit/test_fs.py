@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_safe.fs import (
+from repo_guard.fs import (
     ensure_relative_safe_path,
     is_within_directory,
     list_created_files,

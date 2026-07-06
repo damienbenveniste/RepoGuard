@@ -24,6 +24,6 @@ Each `.mdc` file includes frontmatter with metadata such as `description`,
 ## Why Checks Still Matter
 
 Instruction files guide agents, but they do not enforce behavior. Generated
-projects use `agent-safe check`, strict local tooling, and GitHub Actions CI to
+projects use `repo-guard check`, strict local tooling, and GitHub Actions CI to
 catch risky patterns such as type suppressions, unresolved templates, missing
 adapter files, and mismatched configuration.

@@ -10,7 +10,7 @@ my_project/
   LICENSE
   pyproject.toml
   pyrightconfig.json
-  agent-safe.toml
+  repo-guard.toml
   .github/workflows/ci.yml
   .github/workflows/docs.yml
   docs/index.md
@@ -32,7 +32,7 @@ CLAUDE.md
 
 ## Configuration
 
-`agent-safe.toml` stores the fields V1 commands need:
+`repo-guard.toml` stores the fields V1 commands need:
 
 - project name and import package;
 - selected agent adapters;
@@ -49,9 +49,9 @@ Generated projects are expected to run:
 
 ```bash
 uv sync --all-groups
-uv run agent-safe check
-uv run agent-safe validate --quick
-uv run agent-safe validate
+uv run repo-guard check
+uv run repo-guard validate --quick
+uv run repo-guard validate
 ```
 
 Use `inspect-diff` inside a git repository to understand which checks are

@@ -3,7 +3,7 @@
 import pytest
 from jinja2 import UndefinedError
 
-from agent_safe.renderer import TemplateRenderer
+from repo_guard.renderer import TemplateRenderer
 
 
 def test_renderer_loads_packaged_template() -> None:

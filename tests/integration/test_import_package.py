@@ -1,8 +1,8 @@
 """Import smoke tests for the package."""
 
-import agent_safe
+import repo_guard
 
 
 def test_package_exposes_version() -> None:
     """The package exposes a stable version string."""
-    assert agent_safe.__version__ == "0.1.0"
+    assert repo_guard.__version__ == "0.1.0"

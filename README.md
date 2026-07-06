@@ -1,27 +1,27 @@
-# agent-safe-python
+# RepoGuard
 
-`agent-safe-python` generates strict Python starter repositories for teams using
+`repo-guard` generates strict Python starter repositories for teams using
 coding agents. It creates a typed package layout, local validation commands,
 GitHub Actions workflows, and agent instructions for Codex, Claude Code, and
 Cursor.
 
-The installed command is `agent-safe`.
+The PyPI package and installed command are both `repo-guard`.
 
 ## Install
 
 After the package is published to PyPI:
 
 ```bash
-uvx agent-safe-python version
+uvx repo-guard version
 ```
 
 From a local checkout or built wheel:
 
 ```bash
 uv sync --all-groups
-uv run agent-safe version
+uv run repo-guard version
 uv build
-uvx --from dist/agent_safe_python-0.1.0-py3-none-any.whl agent-safe version
+uvx --from dist/repo_guard-0.1.0-py3-none-any.whl repo-guard version
 ```
 
 ## Quickstart
@@ -29,19 +29,19 @@ uvx --from dist/agent_safe_python-0.1.0-py3-none-any.whl agent-safe version
 Generate a project with every supported adapter:
 
 ```bash
-uvx agent-safe-python init my_project --agent all
+uvx repo-guard init my_project --agent all
 cd my_project
 uv sync --all-groups
-uv run agent-safe check
-uv run agent-safe validate --quick
+uv run repo-guard check
+uv run repo-guard validate --quick
 ```
 
 Generate for one agent surface:
 
 ```bash
-uvx agent-safe-python init codex_demo --agent codex
-uvx agent-safe-python init claude_demo --agent claude
-uvx agent-safe-python init cursor_demo --agent cursor
+uvx repo-guard init codex_demo --agent codex
+uvx repo-guard init claude_demo --agent claude
+uvx repo-guard init cursor_demo --agent cursor
 ```
 
 Use `--dry-run` to preview files and `--force` to overwrite known generated
@@ -58,7 +58,7 @@ my_project/
   LICENSE
   pyproject.toml
   pyrightconfig.json
-  agent-safe.toml
+  repo-guard.toml
   .github/workflows/
   docs/
   examples/
@@ -79,13 +79,13 @@ Adapter files are added according to `--agent`:
 ## Commands
 
 ```bash
-agent-safe init NAME [--agent codex|claude|cursor|all]
-agent-safe check [--path .] [--json]
-agent-safe inspect-diff [--path .] [--base main] [--json]
-agent-safe validate [--path .] [--quick] [--json]
-agent-safe compile-rules [--path .] [--agent codex|claude|cursor|all] [--dry-run] [--force]
-agent-safe doctor [--path .] [--json]
-agent-safe version
+repo-guard init NAME [--agent codex|claude|cursor|all]
+repo-guard check [--path .] [--json]
+repo-guard inspect-diff [--path .] [--base main] [--json]
+repo-guard validate [--path .] [--quick] [--json]
+repo-guard compile-rules [--path .] [--agent codex|claude|cursor|all] [--dry-run] [--force]
+repo-guard doctor [--path .] [--json]
+repo-guard version
 ```
 
 `check` runs fast policy checks. `inspect-diff` explains validation obligations
@@ -104,7 +104,7 @@ uv run ruff format --check .
 uv run ruff check .
 uv run mypy src tests
 uv run pyright
-uv run pytest tests --cov=agent_safe --cov-report=term-missing --cov-fail-under=95
+uv run pytest tests --cov=repo_guard --cov-report=term-missing --cov-fail-under=95
 uv run mkdocs build --strict
 uv build
 ```
