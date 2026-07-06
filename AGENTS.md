@@ -215,6 +215,10 @@ explain why it is blocked.
   tracks them.
 - Treat this checkout as the workspace boundary unless the user explicitly asks
   to touch another checkout.
+- Treat ScaffoldGuard as an open source repository: keep `main` protected, use
+  pull requests for future repository changes, keep contribution guidance
+  current, and do not weaken branch protection or maintainer-only merge controls
+  unless the user explicitly asks.
 - When a task explicitly includes pushing or publishing, watch the relevant
   GitHub Actions runs after pushing and report the final status.
 

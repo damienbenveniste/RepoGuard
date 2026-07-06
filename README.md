@@ -21,6 +21,14 @@ Maintainers publish `scaffold-guard` through GitHub Actions Trusted Publishing.
 No PyPI API token is required. To release a new version, create a GitHub Release
 or manually run the `Publish` workflow from `main`.
 
+## Contributing
+
+Issues and pull requests are welcome. Read
+[CONTRIBUTING.md](CONTRIBUTING.md) before opening a change.
+
+Please report security issues privately through
+[SECURITY.md](SECURITY.md), not in public issues.
+
 ## Quickstart
 
 Generate a project with every supported adapter:
