@@ -8,12 +8,21 @@ Cursor.
 The PyPI package and `uvx` entrypoint are `scaffold-guard`; the canonical
 installed command is `scaffold-guard`.
 
-## Install
+## Run The CLI
 
-After the package is published to PyPI:
+Run ScaffoldGuard without installing it globally:
 
 ```bash
 uvx scaffold-guard version
+uvx scaffold-guard init my_project --agent all
+```
+
+For repeated use, install the CLI as a `uv` tool:
+
+```bash
+uv tool install scaffold-guard
+scaffold-guard version
+scaffold-guard init my_project --agent all
 ```
 
 From a local checkout or built wheel:
@@ -27,19 +36,9 @@ uvx --from dist/scaffold_guard-0.1.0-py3-none-any.whl scaffold-guard version
 
 ## Publishing
 
-PyPI publishing is prepared through GitHub Actions Trusted Publishing. Before
-the first release, configure a PyPI pending publisher for:
-
-```text
-Project name: scaffold-guard
-Owner: damienbenveniste
-Repository: ScaffoldGuard
-Workflow: publish.yml
-Environment: pypi
-```
-
-No PyPI API token is required. After the pending publisher exists, publish a
-GitHub Release or manually run the `Publish` workflow from `main`.
+Maintainers publish `scaffold-guard` through GitHub Actions Trusted Publishing.
+No PyPI API token is required. To release a new version, create a GitHub Release
+or manually run the `Publish` workflow from `main`.
 
 ## Quickstart
 
@@ -52,6 +51,11 @@ uv sync --all-groups
 uv run scaffold-guard check
 uv run scaffold-guard validate --quick
 ```
+
+If you installed the tool with `uv tool install scaffold-guard`, use
+`scaffold-guard init ...` instead of `uvx scaffold-guard init ...`.
+Generated projects include `scaffold-guard` in the `dev` dependency group, so
+`uv run scaffold-guard ...` works after `uv sync --all-groups`.
 
 Generate for one agent surface:
 

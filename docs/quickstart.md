@@ -1,11 +1,20 @@
 # Quickstart
 
-## Install
+## Run The CLI
 
-After PyPI publication, run the CLI with `uvx`:
+Run ScaffoldGuard without installing it globally:
 
 ```bash
 uvx scaffold-guard version
+uvx scaffold-guard init my_project --agent all
+```
+
+For repeated use, install the CLI as a `uv` tool:
+
+```bash
+uv tool install scaffold-guard
+scaffold-guard version
+scaffold-guard init my_project --agent all
 ```
 
 For local release testing, build the wheel and run it directly:
@@ -25,6 +34,11 @@ uv run scaffold-guard check
 uv run scaffold-guard validate --quick
 ```
 
+If you installed the tool with `uv tool install scaffold-guard`, use
+`scaffold-guard init ...` instead of `uvx scaffold-guard init ...`.
+Generated projects include `scaffold-guard` in the `dev` dependency group, so
+`uv run scaffold-guard ...` works after `uv sync --all-groups`.
+
 Use one adapter when you only need one agent surface:
 
 ```bash
@@ -35,10 +49,17 @@ uvx scaffold-guard init cursor_demo --agent cursor
 
 ## Preview Or Refresh Files
 
+Preview a new project without writing files:
+
 ```bash
-scaffold-guard init demo --dry-run
-scaffold-guard compile-rules --path demo --dry-run
-scaffold-guard compile-rules --path demo --force
+uvx scaffold-guard init demo --dry-run
+```
+
+Refresh managed instruction files from inside a generated project:
+
+```bash
+uv run scaffold-guard compile-rules --dry-run
+uv run scaffold-guard compile-rules --force
 ```
 
 `compile-rules` refuses to overwrite manually edited instruction files unless

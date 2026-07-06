@@ -26,9 +26,10 @@ uvx --from dist/scaffold_guard-0.1.0-py3-none-any.whl scaffold-guard version
 
 The wheel must include the packaged templates under `scaffold_guard/templates/`.
 
-## Configure PyPI
+## PyPI Configuration
 
-Before the first upload, create a PyPI pending publisher with these values:
+ScaffoldGuard publishes with PyPI Trusted Publishing from GitHub Actions. The
+publisher is configured with these values:
 
 ```text
 Project name: scaffold-guard
@@ -38,14 +39,12 @@ Workflow: publish.yml
 Environment: pypi
 ```
 
-ScaffoldGuard publishes with PyPI Trusted Publishing from GitHub Actions. Do not add
-a PyPI API token or username/password secret for the release workflow.
+Do not add a PyPI API token or username/password secret for the release workflow.
 
 ## Publish
 
-After PyPI has the pending publisher, publish a GitHub Release for the version
-or manually run the `Publish` workflow from the `main` branch in GitHub Actions.
-The workflow builds the distributions, reruns the package gate, and uploads the
-`dist/` contents to PyPI.
+Create a GitHub Release for the version or manually run the `Publish` workflow
+from the `main` branch in GitHub Actions. The workflow builds the distributions,
+reruns the package gate, and uploads the `dist/` contents to PyPI.
 
 Homebrew formula automation is planned after PyPI installation is stable.

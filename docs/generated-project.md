@@ -54,5 +54,9 @@ uv run scaffold-guard validate --quick
 uv run scaffold-guard validate
 ```
 
+The generated `pyproject.toml` includes `scaffold-guard` in the `dev`
+dependency group, so these commands are available through `uv run` after
+`uv sync --all-groups`.
+
 Use `inspect-diff` inside a git repository to understand which checks are
 required for a specific change.

@@ -24,5 +24,10 @@ uv run scaffold-guard check
 uv run scaffold-guard validate --quick
 ```
 
+For repeated use, install the CLI with `uv tool install scaffold-guard` and run
+`scaffold-guard init ...` directly. Generated projects include
+`scaffold-guard` in the `dev` dependency group, so use
+`uv run scaffold-guard ...` after `uv sync --all-groups`.
+
 Read the quickstart first, then use the adapter and checks pages when tuning a
 generated project.
