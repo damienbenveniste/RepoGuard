@@ -73,6 +73,30 @@ configuration change in this repository.
 - Do not lower lint, typing, docs, test, or coverage gates to force a green
   result.
 
+## Delegation, Subagents, and MCP
+
+- Keep the main thread focused on decisions, edits, validation, and final
+  synthesis. Use subagents to keep bulky exploration, broad searches, and
+  independent investigation out of the main thread when delegation will reduce
+  noise.
+- Use subagents for bounded, read-only work: codebase reconnaissance,
+  test-failure triage, generated-output inspection, documentation review,
+  compatibility research, and issue/PR or CI summarization.
+- Give subagents explicit scope, paths or commands to inspect, constraints, and
+  the expected evidence format. Do not delegate final judgment, destructive
+  actions, secret handling, broad edits, release actions, or completion claims.
+- Treat subagent findings as evidence to verify against repository files,
+  tests, or primary sources. The primary agent owns synthesis, edits,
+  validation, and final responses.
+- Use MCP servers when available for current external context: GitHub or GitLab
+  for issues, PRs, releases, and CI; documentation/context servers for current
+  library APIs; browser tools for rendered UI checks; package-index tools for
+  published metadata; and read-only database or observability servers for
+  diagnostics.
+- Keep MCP usage read-only unless the user explicitly asks for mutation. If an
+  MCP server is unavailable, continue with repo-local evidence and state the
+  limitation when it affects confidence.
+
 ## Python Tooling
 
 - Use `uv` for dependency management, lockfile updates, virtual environment work,
@@ -96,7 +120,9 @@ configuration change in this repository.
   validation commands, checks, docs, and agent instructions must all honor the
   selected tool set.
 - Write clear docstrings for public modules, classes, functions, and methods
-  when the behavior is not obvious from the name and types.
+  when behavior, invariants, side effects, filesystem/network access, or error
+  handling are not obvious from the name and types. Avoid boilerplate docstrings
+  that merely restate the signature.
 
 ## Types and Data Modeling
 
@@ -108,8 +134,12 @@ configuration change in this repository.
   shapes.
 - Avoid `# type: ignore`, `# pyright: ignore`, `# noqa`, broad exclusions, and
   lint suppressions to hide failures. Fix the type flow or rule violation.
-- Use lightweight dataclasses or typed structures for CLI internals in V1. Do not
-  add Pydantic unless the benefit clearly outweighs the dependency cost.
+- Use `dataclass(frozen=True, slots=True)` for internal structured state unless
+  mutation is required.
+- Use `TypedDict` or explicit typed mappings for stable JSON, TOML, API, or CLI
+  payload shapes.
+- Use Pydantic only at runtime-validation boundaries where parse errors,
+  coercion, or external input validation justify the dependency and complexity.
 - Keep filesystem and rendering models explicit enough to test dry-run,
   overwrite, generated-marker, and adapter behavior deterministically.
 
