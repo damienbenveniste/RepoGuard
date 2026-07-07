@@ -76,12 +76,24 @@ configuration change in this repository.
 
 ## Delegation, Subagents, and MCP
 
-- Use subagents early for non-trivial repo mapping, test-gap discovery,
-  documentation sweeps, and independent implementation review. Keep the main
-  thread focused on decisions, edits, validation, and integration.
-- Give subagents narrow read-only briefs unless they are explicitly assigned an
-  implementation slice. Ask them to return concrete file paths, risks, and
-  recommended tests rather than broad summaries.
+- For every non-trivial implementation task, spawn at least one subagent before
+  substantial local edits. Use multiple subagents in parallel when the work has
+  separable concerns such as code mapping, template changes, docs, tests, or
+  independent review.
+- Keep the main thread as coordinator: it owns the plan, instruction
+  interpretation, integration decisions, final validation, and user
+  communication. Do not let the main thread do all exploration and
+  implementation for broad tasks while subagents sit unused.
+- Assign subagents concrete ownership. Use read-only briefs for mapping,
+  test-gap discovery, documentation sweeps, and review. Use worker briefs for
+  disjoint implementation slices when edits can be separated cleanly.
+- Give each subagent a narrow brief with expected output: concrete file paths,
+  risks, changed files if any, and recommended tests. Do not ask for broad
+  summaries.
+- If subagents are not used for an implementation task, the final response must
+  say why. Acceptable reasons are limited to tiny single-file edits, unavailable
+  subagent tooling, or a task that is purely a direct user question with no repo
+  change.
 - Do not delegate interpretation of repository instructions, selected skills,
   security-sensitive changes, release decisions, or final completion claims.
   The main agent owns those.
