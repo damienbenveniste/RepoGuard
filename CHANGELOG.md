@@ -15,3 +15,5 @@
 - Renamed the project, PyPI distribution, module, CLI, and generated config to
   ScaffoldGuard / `scaffold-guard`.
 - Added guided `scaffold-guard init` setup for first-time users.
+- Added `scaffold-guard init .` for initializing an existing empty project
+  directory.

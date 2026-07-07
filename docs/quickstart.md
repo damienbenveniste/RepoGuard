@@ -29,6 +29,13 @@ For non-interactive use, pass the options as flags:
 scaffold-guard init my_project --agent all
 ```
 
+If you already created and entered an empty project folder, initialize the
+current directory:
+
+```bash
+scaffold-guard init .
+```
+
 Use one adapter when you only need one agent surface:
 
 ```bash

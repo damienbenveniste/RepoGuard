@@ -213,6 +213,41 @@ def test_init_guided_recovers_from_invalid_prompt_answers(
     assert "Coverage floor must be between 1 and 100." in result.output
 
 
+def test_init_dot_generates_project_in_current_directory(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`init .` writes the scaffold into an existing empty current directory."""
+    project_dir = tmp_path / "already-created"
+    project_dir.mkdir()
+    monkeypatch.chdir(project_dir)
+
+    result = CliRunner().invoke(app, ["init", ".", "--agent", "codex"])
+
+    assert result.exit_code == SUCCESS, result.output
+    assert (project_dir / "AGENTS.md").exists()
+    assert (project_dir / "src/already_created/core.py").exists()
+    assert not (project_dir / "already-created").exists()
+    assert "Created ScaffoldGuard Python project: already-created" in result.output
+
+
+def test_init_guided_accepts_dot_for_current_directory(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Guided setup accepts dot as the current-directory target."""
+    project_dir = tmp_path / "guided-current"
+    project_dir.mkdir()
+    monkeypatch.chdir(project_dir)
+
+    result = CliRunner().invoke(app, ["init"], input=".\ncodex\n\n\n\n\n\n")
+
+    assert result.exit_code == SUCCESS, result.output
+    assert (project_dir / "AGENTS.md").exists()
+    assert (project_dir / "src/guided_current/core.py").exists()
+    assert "Created ScaffoldGuard Python project: guided-current" in result.output
+
+
 def test_init_dry_run_creates_no_files(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -228,18 +263,19 @@ def test_init_dry_run_creates_no_files(
     assert not (tmp_path / "demo").exists()
 
 
-def test_init_rejects_existing_directory_without_force(
+def test_init_rejects_non_empty_existing_directory_without_force(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Existing target directories require explicit force."""
+    """Populated target directories require explicit force."""
     monkeypatch.chdir(tmp_path)
     (tmp_path / "demo").mkdir()
+    (tmp_path / "demo/notes.txt").write_text("keep\n", encoding="utf-8")
 
     result = CliRunner().invoke(app, ["init", "demo", "--agent", "codex"])
 
     assert result.exit_code != SUCCESS
-    assert "Target directory already exists" in result.output
+    assert "Target directory already exists and is not empty" in result.output
 
 
 def test_init_force_overwrites_generated_files_only(
