@@ -73,6 +73,30 @@ configuration change in this repository.
 - Do not lower lint, typing, docs, test, or coverage gates to force a green
   result.
 
+## Delegation, Subagents, and MCP
+
+- Keep the main thread focused on decisions, edits, validation, and final
+  synthesis. Use subagents to keep bulky exploration, broad searches, and
+  independent investigation out of the main thread when delegation will reduce
+  noise.
+- Use subagents for bounded, read-only work: codebase reconnaissance,
+  test-failure triage, generated-output inspection, documentation review,
+  compatibility research, and issue/PR or CI summarization.
+- Give subagents explicit scope, paths or commands to inspect, constraints, and
+  the expected evidence format. Do not delegate final judgment, destructive
+  actions, secret handling, broad edits, release actions, or completion claims.
+- Treat subagent findings as evidence to verify against repository files,
+  tests, or primary sources. The primary agent owns synthesis, edits,
+  validation, and final responses.
+- Use MCP servers when available for current external context: GitHub or GitLab
+  for issues, PRs, releases, and CI; documentation/context servers for current
+  library APIs; browser tools for rendered UI checks; package-index tools for
+  published metadata; and read-only database or observability servers for
+  diagnostics.
+- Keep MCP usage read-only unless the user explicitly asks for mutation. If an
+  MCP server is unavailable, continue with repo-local evidence and state the
+  limitation when it affects confidence.
+
 ## Python Tooling
 
 - Use `uv` for dependency management, lockfile updates, virtual environment work,
