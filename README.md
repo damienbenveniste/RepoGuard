@@ -33,10 +33,11 @@ Please report security issues privately through
 
 ## Quickstart
 
-Generate a project with every supported adapter:
+Start the guided setup and answer the prompts. This example assumes you enter
+`my_project` as the project name.
 
 ```bash
-scaffold-guard init my_project --agent all
+scaffold-guard init
 cd my_project
 uv sync --all-groups
 scaffold-guard check
@@ -45,6 +46,12 @@ scaffold-guard validate --quick
 
 Generated projects include CI and local development defaults, but the user-facing
 CLI remains the installed `scaffold-guard` command.
+
+For non-interactive use, pass the options as flags:
+
+```bash
+scaffold-guard init my_project --agent all
+```
 
 Generate for one agent surface:
 
@@ -89,7 +96,7 @@ Adapter files are added according to `--agent`:
 ## Commands
 
 ```bash
-scaffold-guard init NAME [--agent codex|claude|cursor|all]
+scaffold-guard init [NAME] [--guided] [--agent codex|claude|cursor|all]
 scaffold-guard check [--path .] [--json]
 scaffold-guard inspect-diff [--path .] [--base main] [--json]
 scaffold-guard validate [--path .] [--quick] [--json]

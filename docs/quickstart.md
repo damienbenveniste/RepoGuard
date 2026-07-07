@@ -9,8 +9,11 @@ scaffold-guard version
 
 ## Create A Project
 
+Start the guided setup and answer the prompts. This example assumes you enter
+`my_project` as the project name.
+
 ```bash
-scaffold-guard init my_project --agent all
+scaffold-guard init
 cd my_project
 uv sync --all-groups
 scaffold-guard check
@@ -19,6 +22,12 @@ scaffold-guard validate --quick
 
 Generated projects include CI and local development defaults, but the
 user-facing CLI remains the installed `scaffold-guard` command.
+
+For non-interactive use, pass the options as flags:
+
+```bash
+scaffold-guard init my_project --agent all
+```
 
 Use one adapter when you only need one agent surface:
 

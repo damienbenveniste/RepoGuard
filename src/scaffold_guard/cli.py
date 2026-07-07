@@ -15,7 +15,11 @@ from scaffold_guard.diffing import DiffInspectionError, DiffReport, inspect_diff
 from scaffold_guard.doctor import DoctorReport, run_doctor
 from scaffold_guard.models import ScaffoldSummary
 from scaffold_guard.project_config import ProjectConfigError
-from scaffold_guard.scaffold import build_init_options, scaffold_package_project
+from scaffold_guard.scaffold import (
+    build_init_options,
+    normalize_project_name,
+    scaffold_package_project,
+)
 from scaffold_guard.validation import ValidationError, ValidationReport, run_validation
 
 
@@ -47,6 +51,10 @@ class CiOption(StrEnum):
 
     GITHUB = "github"
 
+
+CHOICE_SEPARATOR = "/"
+COVERAGE_MIN = 1
+COVERAGE_MAX = 100
 
 app = typer.Typer(
     add_completion=False,
@@ -82,6 +90,115 @@ def _print_init_summary(summary: ScaffoldSummary, *, agent: AgentOption) -> None
     typer.echo("  uv sync --all-groups")
     typer.echo("  scaffold-guard check")
     typer.echo("  scaffold-guard validate")
+
+
+def _prompt_init_name(default: str | None) -> str:
+    """Prompt for a project name and validate it before continuing."""
+    while True:
+        name = str(
+            typer.prompt("Project name", default=default)
+            if default
+            else typer.prompt("Project name")
+        )
+        try:
+            normalize_project_name(name)
+        except ValueError as exc:
+            typer.echo(f"Error: {exc}", err=True)
+            continue
+        return name
+
+
+def _prompt_choice(label: str, *, choices: tuple[str, ...], default: str) -> str:
+    """Prompt until the user selects one of the provided choices."""
+    choices_by_lowercase = {choice.lower(): choice for choice in choices}
+    prompt_label = f"{label} ({CHOICE_SEPARATOR.join(choices)})"
+    while True:
+        answer = str(typer.prompt(prompt_label, default=default)).strip()
+        choice = choices_by_lowercase.get(answer.lower())
+        if choice is not None:
+            return choice
+        typer.echo(f"Choose one of: {', '.join(choices)}", err=True)
+
+
+def _prompt_text(label: str, *, default: str) -> str:
+    """Prompt for a non-empty text value."""
+    while True:
+        answer = str(typer.prompt(label, default=default)).strip()
+        if answer:
+            return answer
+        typer.echo("Value cannot be empty.", err=True)
+
+
+def _prompt_coverage(default: int) -> int:
+    """Prompt for a coverage floor between 1 and 100."""
+    while True:
+        answer = str(typer.prompt("Coverage floor (1-100)", default=str(default))).strip()
+        try:
+            coverage = int(answer)
+        except ValueError:
+            typer.echo("Coverage floor must be an integer.", err=True)
+            continue
+        if COVERAGE_MIN <= coverage <= COVERAGE_MAX:
+            return coverage
+        typer.echo(
+            f"Coverage floor must be between {COVERAGE_MIN} and {COVERAGE_MAX}.",
+            err=True,
+        )
+
+
+def _prompt_init_options(
+    *,
+    name: str | None,
+    agent: AgentOption,
+    profile: ProfileOption,
+    license_name: LicenseOption,
+    python_min: str,
+    coverage: int,
+    ci: CiOption,
+) -> tuple[str, AgentOption, ProfileOption, LicenseOption, str, int, CiOption]:
+    """Prompt for init options while preserving current flag defaults."""
+    typer.echo("ScaffoldGuard guided setup")
+    typer.echo()
+    prompted_name = _prompt_init_name(name)
+    prompted_agent = AgentOption(
+        _prompt_choice(
+            "Agent adapters",
+            choices=tuple(option.value for option in AgentOption),
+            default=agent.value,
+        )
+    )
+    prompted_profile = ProfileOption(
+        _prompt_choice(
+            "Project profile",
+            choices=tuple(option.value for option in ProfileOption),
+            default=profile.value,
+        )
+    )
+    prompted_license = LicenseOption(
+        _prompt_choice(
+            "License",
+            choices=tuple(option.value for option in LicenseOption),
+            default=license_name.value,
+        )
+    )
+    prompted_python_min = _prompt_text("Minimum Python version", default=python_min)
+    prompted_coverage = _prompt_coverage(coverage)
+    prompted_ci = CiOption(
+        _prompt_choice(
+            "CI provider",
+            choices=tuple(option.value for option in CiOption),
+            default=ci.value,
+        )
+    )
+    return (
+        prompted_name,
+        prompted_agent,
+        prompted_profile,
+        prompted_license,
+        prompted_python_min,
+        prompted_coverage,
+        prompted_ci,
+    )
 
 
 def _print_check_report(report: CheckReport) -> None:
@@ -163,7 +280,10 @@ def version_command() -> None:
 
 @app.command("init")
 def init_command(
-    name: Annotated[str, typer.Argument(help="Project directory name to create.")],
+    name: Annotated[
+        str | None,
+        typer.Argument(help="Project directory name to create. Omit to use guided setup."),
+    ] = None,
     agent: Annotated[
         AgentOption,
         typer.Option("--agent", help="Agent adapter files to generate."),
@@ -188,10 +308,24 @@ def init_command(
         typer.Option("--coverage", min=1, max=100, help="Generated project coverage floor."),
     ] = 95,
     ci: Annotated[CiOption, typer.Option("--ci", help="Generated CI provider.")] = CiOption.GITHUB,
+    guided: Annotated[
+        bool,
+        typer.Option("--guided", help="Prompt for init options even when NAME is provided."),
+    ] = False,
     dry_run: Annotated[bool, typer.Option("--dry-run", help="Show planned files only.")] = False,
     force: Annotated[bool, typer.Option("--force", help="Overwrite generated files.")] = False,
 ) -> None:
     """Create a new ScaffoldGuard Python project."""
+    if guided or name is None:
+        name, agent, profile, license_name, python_min, coverage, ci = _prompt_init_options(
+            name=name,
+            agent=agent,
+            profile=profile,
+            license_name=license_name,
+            python_min=python_min,
+            coverage=coverage,
+            ci=ci,
+        )
     try:
         options = build_init_options(
             name,

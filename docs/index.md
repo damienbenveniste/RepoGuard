@@ -16,14 +16,20 @@ GitHub Actions CI, local policy checks, and agent instruction files.
 
 ## Basic Flow
 
+This example assumes you enter `my_project` as the project name during guided
+setup.
+
 ```bash
 uv tool install scaffold-guard
-scaffold-guard init my_project --agent all
+scaffold-guard init
 cd my_project
 uv sync --all-groups
 scaffold-guard check
 scaffold-guard validate --quick
 ```
+
+The `init` command starts guided setup when `NAME` is omitted. Pass `NAME` and
+flags for non-interactive use.
 
 Generated projects include CI and local development defaults, but the
 user-facing CLI remains the installed `scaffold-guard` command.
