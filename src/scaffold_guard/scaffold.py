@@ -88,12 +88,18 @@ def build_init_options(
     force: bool,
 ) -> InitOptions:
     """Build validated init options from CLI values."""
-    project_slug, package_name = normalize_project_name(name)
+    stripped_name = name.strip()
+    if stripped_name == ".":
+        project_slug, package_name = normalize_project_name(base_dir.name)
+        target_dir = base_dir
+    else:
+        project_slug, package_name = normalize_project_name(stripped_name)
+        target_dir = base_dir / project_slug
     if ci != "github":
         msg = f"Unsupported CI provider: {ci}"
         raise ValueError(msg)
     return InitOptions(
-        target_dir=base_dir / project_slug,
+        target_dir=target_dir,
         project_slug=project_slug,
         package_name=package_name,
         agent=agent,
@@ -173,12 +179,17 @@ def scaffold_package_project(
     renderer: TemplateRenderer | None = None,
 ) -> ScaffoldSummary:
     """Render and write, or dry-run, a generated package project."""
-    if options.target_dir.exists() and not options.force:
-        msg = (
-            "Target directory already exists; use --force to overwrite generated files: "
-            f"{options.target_dir}"
-        )
-        raise FileExistsError(msg)
+    if options.target_dir.exists():
+        if not options.target_dir.is_dir():
+            msg = f"Target path is not a directory: {options.target_dir}"
+            raise NotADirectoryError(msg)
+        if any(options.target_dir.iterdir()) and not options.force:
+            msg = (
+                "Target directory already exists and is not empty; use --force to overwrite "
+                "generated files: "
+                f"{options.target_dir}"
+            )
+            raise FileExistsError(msg)
 
     rendered_files = render_package_files(options, renderer=renderer)
     planned_files = write_rendered_files(

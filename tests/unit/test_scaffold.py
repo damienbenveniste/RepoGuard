@@ -84,6 +84,29 @@ def test_build_init_options_uses_current_base_directory(tmp_path: Path) -> None:
     assert options.package_name == "demo_project"
 
 
+def test_build_init_options_can_target_current_directory(tmp_path: Path) -> None:
+    """A dot target initializes the current directory using its name."""
+    project_dir = tmp_path / "Current-Project"
+    project_dir.mkdir()
+
+    options = build_init_options(
+        ".",
+        base_dir=project_dir,
+        agent="all",
+        profile="package",
+        license_name="MIT",
+        python_min="3.13",
+        coverage=95,
+        ci="github",
+        dry_run=False,
+        force=False,
+    )
+
+    assert options.target_dir == project_dir
+    assert options.project_slug == "current-project"
+    assert options.package_name == "current_project"
+
+
 def test_package_template_specs_include_selected_adapters(tmp_path: Path) -> None:
     """Adapter selections add their own generated files."""
     base_options = _init_options(tmp_path, agent="codex")
@@ -110,12 +133,24 @@ def test_render_package_files_has_no_project_jinja_placeholders(tmp_path: Path) 
         assert "{%" not in rendered_file.content
 
 
-def test_scaffold_package_project_rejects_existing_target_without_force(tmp_path: Path) -> None:
-    """The high-level init path refuses existing target directories unless forced."""
+def test_scaffold_package_project_allows_existing_empty_target(tmp_path: Path) -> None:
+    """The high-level init path can write into an existing empty directory."""
     target_dir = tmp_path / "demo"
     target_dir.mkdir()
 
-    with pytest.raises(FileExistsError, match="Target directory already exists"):
+    summary = scaffold_package_project(_init_options(tmp_path, agent="codex"))
+
+    assert summary.target_dir == target_dir
+    assert (target_dir / "AGENTS.md").exists()
+
+
+def test_scaffold_package_project_rejects_non_empty_target_without_force(tmp_path: Path) -> None:
+    """The high-level init path refuses populated target directories unless forced."""
+    target_dir = tmp_path / "demo"
+    target_dir.mkdir()
+    (target_dir / "notes.txt").write_text("keep\n", encoding="utf-8")
+
+    with pytest.raises(FileExistsError, match="not empty"):
         scaffold_package_project(_init_options(tmp_path, agent="codex"))
 
 

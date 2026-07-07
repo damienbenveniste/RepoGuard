@@ -96,12 +96,15 @@ def _prompt_init_name(default: str | None) -> str:
     """Prompt for a project name and validate it before continuing."""
     while True:
         name = str(
-            typer.prompt("Project name", default=default)
+            typer.prompt("Project name, or '.' for current directory", default=default)
             if default
-            else typer.prompt("Project name")
+            else typer.prompt("Project name, or '.' for current directory")
         )
         try:
-            normalize_project_name(name)
+            if name.strip() == ".":
+                normalize_project_name(Path.cwd().name)
+            else:
+                normalize_project_name(name)
         except ValueError as exc:
             typer.echo(f"Error: {exc}", err=True)
             continue
@@ -282,7 +285,10 @@ def version_command() -> None:
 def init_command(
     name: Annotated[
         str | None,
-        typer.Argument(help="Project directory name to create. Omit to use guided setup."),
+        typer.Argument(
+            help="Project directory name to create, or '.' to initialize the current directory. "
+            "Omit to use guided setup."
+        ),
     ] = None,
     agent: Annotated[
         AgentOption,
