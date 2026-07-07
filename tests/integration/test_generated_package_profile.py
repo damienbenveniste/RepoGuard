@@ -164,6 +164,55 @@ def test_init_all_generates_all_adapter_files(
     assert "Cursor: .cursor/rules/*.mdc + AGENTS.md" in result.output
 
 
+def test_init_without_name_runs_guided_setup(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Omitting NAME starts guided setup and uses prompted values."""
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(
+        app,
+        ["init"],
+        input="guided-demo\nclaude\n\nApache-2.0\n3.14\n90\n\n",
+    )
+
+    assert result.exit_code == SUCCESS, result.output
+    project_dir = tmp_path / "guided-demo"
+    assert (project_dir / "CLAUDE.md").exists()
+    assert not (project_dir / ".cursor").exists()
+    pyproject = (project_dir / "pyproject.toml").read_text(encoding="utf-8")
+    config = (project_dir / "scaffold-guard.toml").read_text(encoding="utf-8")
+    assert 'requires-python = ">=3.14"' in pyproject
+    assert "fail_under = 90" in pyproject
+    assert 'license = "Apache-2.0"' in pyproject
+    assert 'python_min = "3.14"' in config
+    assert "coverage_fail_under = 90" in config
+    assert "ScaffoldGuard guided setup" in result.output
+    assert "Created ScaffoldGuard Python project: guided-demo" in result.output
+
+
+def test_init_guided_recovers_from_invalid_prompt_answers(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Guided setup reports invalid choices and asks again."""
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(
+        app,
+        ["init"],
+        input="demo\nbad-agent\ncodex\npackage\nMIT\n3.13\nnot-a-number\n101\n95\ngithub\n",
+    )
+
+    assert result.exit_code == SUCCESS, result.output
+    assert (tmp_path / "demo/AGENTS.md").exists()
+    assert not (tmp_path / "demo/CLAUDE.md").exists()
+    assert "Choose one of: codex, claude, cursor, all" in result.output
+    assert "Coverage floor must be an integer." in result.output
+    assert "Coverage floor must be between 1 and 100." in result.output
+
+
 def test_init_dry_run_creates_no_files(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
