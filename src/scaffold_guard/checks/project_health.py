@@ -47,6 +47,7 @@ def _missing_required_paths(root: Path) -> list[CheckFinding]:
                 Path("tsconfig.json"),
                 Path("tsconfig.build.json"),
                 Path("biome.json"),
+                Path("vitest.config.ts"),
                 Path("src"),
                 Path("tests"),
             ]
@@ -60,6 +61,7 @@ def _missing_required_paths(root: Path) -> list[CheckFinding]:
                 Path("packages/python/src"),
                 Path("packages/python/tests"),
                 Path("packages/typescript/package.json"),
+                Path("packages/typescript/vitest.config.ts"),
                 Path("packages/typescript/src"),
                 Path("packages/typescript/tests"),
             ]

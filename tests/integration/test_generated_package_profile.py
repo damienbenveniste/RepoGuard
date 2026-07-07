@@ -238,10 +238,16 @@ def test_init_can_generate_python_typescript_monorepo_profile(
     assert _relative_files(project_dir) == BASE_MONOREPO_FILES
     pyproject = (project_dir / "pyproject.toml").read_text(encoding="utf-8")
     package_json = json.loads((project_dir / "package.json").read_text(encoding="utf-8"))
+    biome_json = json.loads((project_dir / "biome.json").read_text(encoding="utf-8"))
     config = tomllib.loads((project_dir / "scaffold-guard.toml").read_text(encoding="utf-8"))
     assert 'packages = ["packages/python/src/demo"]' in pyproject
     assert package_json["workspaces"] == ["packages/typescript"]
     assert package_json["scripts"]["ts:typecheck"].startswith("tsc -p packages/typescript")
+    assert biome_json["files"]["includes"] == [
+        "packages/typescript/**",
+        "!!packages/typescript/dist",
+        "!!packages/typescript/coverage",
+    ]
     assert config["project"]["profile"] == "monorepo"
     assert config["features"]["python"] is True
     assert config["features"]["typescript"] is True

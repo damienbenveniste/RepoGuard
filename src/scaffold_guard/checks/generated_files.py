@@ -20,6 +20,7 @@ AGENT_FILE_PATHS = (
 PACKAGE_BASE_CI_TOKENS = ("uv sync", "pytest", "mkdocs")
 MINIMAL_CI_TOKENS = ("uv tool install scaffold-guard", "scaffold-guard check")
 TYPESCRIPT_CI_TOKENS = (
+    "uv tool install scaffold-guard",
     "npm install",
     "npm run format:check",
     "npm run lint",

@@ -200,6 +200,45 @@ def test_unsafe_patterns_detects_typescript_suppressions_and_any(tmp_path: Path)
     }.issubset(codes)
 
 
+def test_unsafe_patterns_detects_typescript_any_annotation(tmp_path: Path) -> None:
+    """TypeScript any detection catches normal type annotations."""
+    project_dir = _generated_project(tmp_path, profile="typescript")
+    risky_path = project_dir / "src/risky.ts"
+    risky_path.write_text("const value: any = {};\n", encoding="utf-8")
+
+    result = check_unsafe_patterns(project_dir)
+
+    assert any(
+        finding.path == "src/risky.ts" and finding.line == 1 and finding.code == "no-typescript-any"
+        for finding in result.findings
+    )
+
+
+def test_unsafe_patterns_detects_typescript_generic_any_forms(tmp_path: Path) -> None:
+    """TypeScript any detection includes common generic type arguments."""
+    project_dir = _generated_project(tmp_path, profile="typescript")
+    risky_path = project_dir / "src/risky.ts"
+    risky_path.write_text(
+        "\n".join(
+            [
+                "type Lookup = Record<string, any>;",
+                "type Items = Array<any>;",
+                "type AsyncValue = Promise<any>;",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = check_unsafe_patterns(project_dir)
+    generic_any_findings = [
+        finding
+        for finding in result.findings
+        if finding.path == "src/risky.ts" and finding.code == "no-typescript-any"
+    ]
+
+    assert [finding.line for finding in generic_any_findings] == [1, 2, 3]
+
+
 def test_unsafe_patterns_detects_env_file(tmp_path: Path) -> None:
     """Secret-bearing local environment files are policy failures."""
     project_dir = _generated_project(tmp_path)
@@ -284,6 +323,17 @@ def test_project_health_requires_typescript_profile_paths(tmp_path: Path) -> Non
     assert any(finding.path == "tsconfig.json" for finding in result.findings)
 
 
+def test_project_health_requires_typescript_vitest_config(tmp_path: Path) -> None:
+    """TypeScript profile health checks require the Vitest config."""
+    project_dir = _generated_project(tmp_path, profile="typescript")
+    (project_dir / "vitest.config.ts").unlink()
+
+    result = check_project_health(project_dir)
+
+    assert not result.ok
+    assert any(finding.path == "vitest.config.ts" for finding in result.findings)
+
+
 def test_project_health_requires_monorepo_profile_paths(tmp_path: Path) -> None:
     """Monorepo profile health checks require both language workspace roots."""
     project_dir = _generated_project(tmp_path, profile="monorepo")
@@ -293,6 +343,19 @@ def test_project_health_requires_monorepo_profile_paths(tmp_path: Path) -> None:
 
     assert not result.ok
     assert any(finding.path == "packages/typescript/src" for finding in result.findings)
+
+
+def test_project_health_requires_monorepo_typescript_vitest_config(tmp_path: Path) -> None:
+    """Monorepo profile health checks require the TypeScript workspace Vitest config."""
+    project_dir = _generated_project(tmp_path, profile="monorepo")
+    (project_dir / "packages/typescript/vitest.config.ts").unlink()
+
+    result = check_project_health(project_dir)
+
+    assert not result.ok
+    assert any(
+        finding.path == "packages/typescript/vitest.config.ts" for finding in result.findings
+    )
 
 
 def test_project_health_detects_claude_wrapper_without_agents_reference(tmp_path: Path) -> None:
@@ -384,6 +447,38 @@ def test_generated_files_checks_typescript_readme_and_ci_tokens(tmp_path: Path) 
     codes = {finding.code for finding in result.findings}
 
     assert {"readme-missing-toolchain-command", "ci-missing-tool"}.issubset(codes)
+
+
+def test_generated_files_requires_typescript_ci_install_command(tmp_path: Path) -> None:
+    """TypeScript CI checks require installing ScaffoldGuard before running it."""
+    project_dir = _generated_project(tmp_path, profile="typescript")
+    workflow = project_dir / ".github/workflows/ci.yml"
+    workflow.write_text(
+        "\n".join(
+            [
+                "name: CI",
+                "run: npm install",
+                "run: npm run format:check",
+                "run: npm run lint",
+                "run: npm run typecheck",
+                "run: npm test",
+                "run: npm run build",
+                "run: npm run coverage",
+                "run: scaffold-guard check",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = check_generated_files(project_dir)
+
+    assert not result.ok
+    assert any(
+        finding.path == ".github/workflows/ci.yml"
+        and finding.code == "ci-missing-tool"
+        and "uv tool install scaffold-guard" in finding.message
+        for finding in result.findings
+    )
 
 
 def test_generated_files_checks_monorepo_readme_and_ci_tokens(tmp_path: Path) -> None:

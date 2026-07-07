@@ -103,7 +103,9 @@ LINE_PATTERNS = (
     ),
 )
 TYPING_ANY_IMPORT = re.compile(r"from\s+typing\s+import\s+.*\bAny\b|import\s+typing\s+as\s+typing")
-TYPESCRIPT_ANY = re.compile(r"(?:^|[^\w])(?::\s*any\b|as\s+any\b)")
+TYPESCRIPT_ANY = re.compile(
+    r"(?::\s*any\b|\bas\s+any\b|[A-Za-z_$][\w$]*\s*<[^>\n]*\bany\b[^>\n]*>)"
+)
 PASSWORD_LITERAL = re.compile(r"password\s*=\s*[\"'][^\"']+[\"']", flags=re.IGNORECASE)
 SHELL_TRUE = re.compile(r"subprocess\.run\([^\n)]*shell\s*=\s*True")
 ABSOLUTE_WRITE = re.compile(r"(?:Path\([\"']/|open\([\"']/|write_text\([\"']/|write_bytes\([\"']/)")
