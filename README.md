@@ -225,11 +225,9 @@ Profile choices:
 | `typescript` | TypeScript package scaffold with npm and configurable TypeScript tooling |
 | `monorepo` | Python + TypeScript workspaces under `packages/` |
 
-`check` runs fast policy checks. `inspect-diff` explains validation obligations
-for changed files in a git repository. `validate` runs the generated project's
-configured validation gate. `compile-rules` regenerates managed agent
-instruction files from templates. `doctor` reports local tool and generated
-project health.
+For when to use each command, available options, and exit-code behavior, read
+the full command reference:
+<https://damienbenveniste.github.io/ScaffoldGuard/commands/>
 
 ## Local Development
 

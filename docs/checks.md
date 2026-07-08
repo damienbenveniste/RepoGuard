@@ -7,6 +7,10 @@ test suite.
 scaffold-guard check [--path .] [--json]
 ```
 
+For the full CLI surface, including `inspect-diff`, `validate`,
+`compile-rules`, `doctor`, and `version`, see the
+[command reference](commands.md).
+
 Exit codes:
 
 | Code | Meaning |
