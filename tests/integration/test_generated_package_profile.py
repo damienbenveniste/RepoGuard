@@ -78,6 +78,14 @@ def test_init_codex_generates_valid_package_tree(
     assert not (project_dir / ".cursor").exists()
     assert "Created ScaffoldGuard package project: demo" in result.output
     assert "Codex: AGENTS.md" in result.output
+    agents = (project_dir / "AGENTS.md").read_text(encoding="utf-8")
+    assert "dataclass(frozen=True, slots=True)" in agents
+    assert "TypedDict" in agents
+    assert "Use Pydantic only at runtime-validation boundaries" in agents
+    assert "Add docstrings to public modules" in agents
+    assert "Keep the main thread focused on decisions" in agents
+    assert "Use subagents for bounded, read-only work" in agents
+    assert "Use MCP servers when available" in agents
 
     _assert_no_unresolved_project_placeholders(project_dir)
     _assert_python_files_compile(project_dir)
@@ -270,9 +278,15 @@ def test_init_all_generates_all_adapter_files(
     assert Path(".claude/rules/python.md") in files
     assert Path(".cursor/rules/python.mdc") in files
     assert "@AGENTS.md" in (project_dir / "CLAUDE.md").read_text(encoding="utf-8")
-    assert "alwaysApply: false" in (project_dir / ".cursor/rules/python.mdc").read_text(
-        encoding="utf-8"
-    )
+    agents = (project_dir / "AGENTS.md").read_text(encoding="utf-8")
+    claude_python = (project_dir / ".claude/rules/python.md").read_text(encoding="utf-8")
+    cursor_python = (project_dir / ".cursor/rules/python.mdc").read_text(encoding="utf-8")
+    cursor_hygiene = (project_dir / ".cursor/rules/git-hygiene.mdc").read_text(encoding="utf-8")
+    assert "alwaysApply: false" in cursor_python
+    assert "Use subagents for bounded, read-only work" in agents
+    assert "dataclass(frozen=True, slots=True)" in claude_python
+    assert "TypedDict" in cursor_python
+    assert "main thread focused" in cursor_hygiene
     assert "Claude Code: CLAUDE.md + .claude/rules/" in result.output
     assert "Cursor: .cursor/rules/*.mdc + AGENTS.md" in result.output
 
