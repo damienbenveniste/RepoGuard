@@ -61,7 +61,7 @@ def _package_required_paths(root: Path) -> list[Path]:
     if tool_enabled(root, "pyright"):
         paths.append(Path("pyrightconfig.json"))
     if docs_enabled(root):
-        paths.append(Path("docs"))
+        paths.extend((Path("docs"), Path("mkdocs.yml")))
     return paths
 
 

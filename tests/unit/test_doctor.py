@@ -60,6 +60,53 @@ def test_doctor_cli_json_reports_missing_generated_config(tmp_path: Path) -> Non
     assert any(check["id"] == "scaffold-guard-config" and not check["ok"] for check in checks)
 
 
+def test_doctor_cli_reports_missing_path_without_traceback(tmp_path: Path) -> None:
+    """Missing doctor paths produce clean diagnostics instead of a Rich traceback."""
+    missing_path = tmp_path / "missing"
+
+    result = CliRunner().invoke(app, ["doctor", "--path", str(missing_path)])
+
+    assert result.exit_code == COMMAND_FAILED
+    assert "scaffold-guard doctor: failed" in result.output
+    assert "- project-root: error" in result.output
+    assert f"Project root missing: {missing_path}" in result.output
+    assert "- git-repository: warning" in result.output
+    assert "Traceback" not in result.output
+
+
+def test_doctor_cli_reports_file_path_without_traceback(tmp_path: Path) -> None:
+    """File doctor paths produce clean diagnostics instead of a Rich traceback."""
+    file_path = tmp_path / "not-a-directory"
+    file_path.write_text("not a directory\n", encoding="utf-8")
+
+    result = CliRunner().invoke(app, ["doctor", "--path", str(file_path)])
+
+    assert result.exit_code == COMMAND_FAILED
+    assert "scaffold-guard doctor: failed" in result.output
+    assert "- project-root: error" in result.output
+    assert f"Project root is not a directory: {file_path}" in result.output
+    assert "- git-repository: warning" in result.output
+    assert "Traceback" not in result.output
+
+
+def test_doctor_cli_json_reports_missing_path_without_traceback(tmp_path: Path) -> None:
+    """Doctor JSON keeps structured invalid-path diagnostics without traceback output."""
+    missing_path = tmp_path / "missing"
+
+    result = CliRunner().invoke(app, ["doctor", "--path", str(missing_path), "--json"])
+
+    payload = cast("dict[str, object]", json.loads(result.output))
+    checks = cast("list[dict[str, object]]", payload["checks"])
+    check_by_id = {str(check["id"]): check for check in checks}
+
+    assert result.exit_code == COMMAND_FAILED
+    assert payload["ok"] is False
+    assert payload["path"] == str(missing_path)
+    assert check_by_id["project-root"]["ok"] is False
+    assert check_by_id["git-repository"]["severity"] == "warning"
+    assert "Traceback" not in result.output
+
+
 def test_doctor_text_reports_successful_generated_project(
     tmp_path: Path,
     generated_project: Callable[..., Path],

@@ -1,5 +1,6 @@
 """Tests for scaffold file planning and writes."""
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -280,6 +281,30 @@ def test_render_package_files_has_no_project_jinja_placeholders(tmp_path: Path) 
         assert "{{ project_" not in rendered_file.content
         assert "{{ package_" not in rendered_file.content
         assert "{%" not in rendered_file.content
+
+
+def test_render_package_files_derives_python_tool_versions_from_python_min(
+    tmp_path: Path,
+) -> None:
+    """Python tool config follows the selected minimum Python version."""
+    options = replace(_init_options(tmp_path, agent="codex"), python_min="3.14")
+    rendered_files = render_package_files(options)
+    rendered_by_path = {rendered_file.path: rendered_file for rendered_file in rendered_files}
+    pyproject = rendered_by_path[Path("pyproject.toml")].content
+
+    assert 'requires-python = ">=3.14"' in pyproject
+    assert 'target-version = "py314"' in pyproject
+    assert 'python_version = "3.14"' in pyproject
+
+
+def test_render_package_files_rejects_invalid_python_min_for_ruff_target(
+    tmp_path: Path,
+) -> None:
+    """Ruff target-version normalization requires a major.minor Python version."""
+    options = replace(_init_options(tmp_path, agent="codex"), python_min="3.14.0")
+
+    with pytest.raises(ValueError, match=r"major\.minor"):
+        render_package_files(options)
 
 
 def test_scaffold_package_project_allows_existing_empty_target(tmp_path: Path) -> None:

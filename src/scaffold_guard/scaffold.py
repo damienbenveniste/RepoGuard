@@ -25,6 +25,7 @@ from scaffold_guard.models import (
 from scaffold_guard.renderer import TemplateRenderer
 
 PROJECT_NAME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
+PYTHON_MINOR_VERSION_PATTERN = re.compile(r"^(?P<major>\d+)\.(?P<minor>\d+)$")
 SUPPORTED_PROFILES = CANONICAL_PROFILES | {"package"}
 SUPPORTED_CI: tuple[CiChoice, ...] = ("github", "gitlab")
 
@@ -33,6 +34,7 @@ PACKAGE_BASE_TEMPLATE_SPECS = (
     TemplateSpec("package/README.md.j2", "README.md"),
     TemplateSpec("package/LICENSE.j2", "LICENSE"),
     TemplateSpec("package/pyproject.toml.j2", "pyproject.toml"),
+    TemplateSpec("package/mkdocs.yml.j2", "mkdocs.yml"),
     TemplateSpec("package/gitignore.j2", ".gitignore"),
     TemplateSpec("package/scaffold-guard.toml.j2", "scaffold-guard.toml"),
     TemplateSpec("package/docs/index.md.j2", "docs/index.md"),
@@ -265,6 +267,7 @@ def build_render_context(options: InitOptions) -> Mapping[str, object]:
         "profile": options.profile,
         "license": options.license,
         "python_min": options.python_min,
+        "ruff_target_version": _ruff_target_version(options.python_min),
         "coverage": options.coverage,
         "ci_provider": options.ci,
         "configured_tools": configured_tools,
@@ -501,6 +504,15 @@ def write_rendered_files(
 def _toml_bool(value: bool) -> str:
     """Render a Python boolean as TOML lowercase text."""
     return "true" if value else "false"
+
+
+def _ruff_target_version(python_min: str) -> str:
+    """Return Ruff's compact target-version value for a major.minor Python version."""
+    match = PYTHON_MINOR_VERSION_PATTERN.fullmatch(python_min)
+    if match is None:
+        msg = f"Python minimum version must use major.minor format: {python_min}"
+        raise ValueError(msg)
+    return f"py{match['major']}{match['minor']}"
 
 
 def _format_tool_list(tools: tuple[str, ...]) -> str:
