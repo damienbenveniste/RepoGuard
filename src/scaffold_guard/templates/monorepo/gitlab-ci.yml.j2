@@ -31,9 +31,15 @@ typescript:
   before_script:
     - npm install
   script:
+{% if use_biome %}
     - npm run ts:format:check
     - npm run ts:lint
+{% endif %}
     - npm run ts:typecheck
+{% if use_vitest %}
     - npm run ts:test
+{% endif %}
     - npm run ts:build
+{% if use_vitest %}
     - npm run ts:coverage
+{% endif %}

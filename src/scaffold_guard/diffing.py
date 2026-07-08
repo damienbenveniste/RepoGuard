@@ -94,6 +94,8 @@ class ProjectValidationSettings:
     ruff: bool = True
     mypy: bool = True
     pyright: bool = True
+    biome: bool = False
+    vitest: bool = False
 
 
 def inspect_diff(path: Path, *, base: str) -> DiffReport:
@@ -226,6 +228,8 @@ def load_project_validation_settings(root: Path) -> ProjectValidationSettings:
         ruff=bool_value(tools, "ruff", default=tool_default),
         mypy=bool_value(tools, "mypy", default=tool_default),
         pyright=bool_value(tools, "pyright", default=tool_default),
+        biome=bool_value(tools, "biome", default=profile in {"typescript", "monorepo"}),
+        vitest=bool_value(tools, "vitest", default=profile in {"typescript", "monorepo"}),
     )
 
 
@@ -478,8 +482,9 @@ def _apply_typescript_source_rules(
 ) -> None:
     """Add requirements caused by TypeScript source changes."""
     _add_many(validations, _typescript_commands(settings, include_build=False))
-    evidence.append("TypeScript tests changed or added for behavior change")
-    if not tests_changed:
+    if settings.vitest:
+        evidence.append("TypeScript tests changed or added for behavior change")
+    if settings.vitest and not tests_changed:
         warnings.append("TypeScript source changed without a detected TypeScript tests/ change.")
 
 
@@ -504,7 +509,7 @@ def _apply_tests_rules(
     """Add requirements caused by test changes."""
     if python_tests_changed:
         validations.append(_python_test_command(settings))
-    if typescript_tests_changed:
+    if typescript_tests_changed and settings.vitest:
         validations.append(_typescript_test_command(settings))
 
 
@@ -630,12 +635,12 @@ def _typescript_commands(
 ) -> tuple[str, ...]:
     """Return TypeScript validation commands for the generated project profile."""
     prefix = "ts:" if settings.profile == "monorepo" else ""
-    commands = [
-        f"npm run {prefix}format:check",
-        f"npm run {prefix}lint",
-        f"npm run {prefix}typecheck",
-        _typescript_test_command(settings),
-    ]
+    commands: list[str] = []
+    if settings.biome:
+        commands.extend((f"npm run {prefix}format:check", f"npm run {prefix}lint"))
+    commands.append(f"npm run {prefix}typecheck")
+    if settings.vitest:
+        commands.append(_typescript_test_command(settings))
     if include_build:
         commands.append(f"npm run {prefix}build")
     return tuple(commands)

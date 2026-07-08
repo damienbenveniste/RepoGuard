@@ -147,6 +147,7 @@ def test_generated_project_config_loads_typescript_profile(
         "mypy": False,
         "pyright": False,
         "typescript": True,
+        "typescript_strict": True,
         "biome": True,
         "vitest": True,
     }
@@ -168,9 +169,49 @@ def test_generated_project_config_loads_monorepo_profile(
     assert config.ruff
     assert config.mypy
     assert config.pyright
+    assert config.typescript_strict
+    assert config.biome
+    assert config.vitest
     assert options.profile == "monorepo"
     assert options.python_enabled
     assert options.typescript_enabled
+    assert options.typescript_strict_enabled
+    assert options.biome_enabled
+    assert options.vitest_enabled
+
+
+def test_generated_project_config_round_trips_typescript_tool_selection(
+    tmp_path: Path,
+    generated_project: Callable[..., Path],
+) -> None:
+    """Generated config exposes disabled TypeScript tool choices."""
+    project_dir = generated_project(
+        tmp_path,
+        profile="typescript",
+        typescript_strict=False,
+        biome=False,
+        vitest=False,
+    )
+
+    config = load_generated_project_config(project_dir)
+    options = config.to_init_options(dry_run=True, force=False)
+    payload = config.to_json()
+
+    assert not config.typescript_strict
+    assert not config.biome
+    assert not config.vitest
+    assert not options.typescript_strict_enabled
+    assert not options.biome_enabled
+    assert not options.vitest_enabled
+    assert payload["tools"] == {
+        "ruff": False,
+        "mypy": False,
+        "pyright": False,
+        "typescript": True,
+        "typescript_strict": False,
+        "biome": False,
+        "vitest": False,
+    }
 
 
 def test_generated_project_config_rejects_bad_profile_and_missing_coverage(

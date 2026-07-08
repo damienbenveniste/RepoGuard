@@ -10,7 +10,13 @@ paths:
 # TypeScript Rules
 
 - Use `npm run` scripts for TypeScript commands.
-- Keep `strict` TypeScript enabled.
+- Follow the compiler mode configured in `tsconfig.json`.
 - Prefer explicit interfaces, discriminated unions, and readonly data where useful.
 - Do not add `any`, `// @ts-ignore`, broad casts, or lint suppressions to hide failures.
-- Keep Biome, TypeScript, and Vitest validation green before claiming completion.
+- Keep TypeScript validation green before claiming completion.
+{% if use_biome %}
+- Keep Biome formatting and linting green when TypeScript files change.
+{% endif %}
+{% if use_vitest %}
+- Keep Vitest tests and coverage green when behavior changes.
+{% endif %}

@@ -22,24 +22,16 @@ MINIMAL_CI_TOKENS = ("uv tool install scaffold-guard", "scaffold-guard check")
 TYPESCRIPT_CI_TOKENS = (
     "uv tool install scaffold-guard",
     "npm install",
-    "npm run format:check",
-    "npm run lint",
     "npm run typecheck",
-    "npm test",
     "npm run build",
-    "npm run coverage",
     "scaffold-guard check",
 )
 MONOREPO_CI_TOKENS = (
     "uv sync",
     "pytest",
     "npm install",
-    "npm run ts:format:check",
-    "npm run ts:lint",
     "npm run ts:typecheck",
-    "npm run ts:test",
     "npm run ts:build",
-    "npm run ts:coverage",
 )
 
 
@@ -179,17 +171,36 @@ def _ci_tokens(root: Path) -> tuple[str, ...]:
     if profile == "minimal":
         return MINIMAL_CI_TOKENS
     if profile == "typescript":
-        return TYPESCRIPT_CI_TOKENS
+        return _typescript_ci_tokens(root)
     if profile == "monorepo":
-        tokens: list[str] = list(MONOREPO_CI_TOKENS)
-        if tool_enabled(root, "ruff"):
-            tokens.append("ruff")
-        if tool_enabled(root, "mypy"):
-            tokens.append("mypy")
-        if tool_enabled(root, "pyright"):
-            tokens.append("pyright")
-        return tuple(tokens)
+        return _monorepo_ci_tokens(root)
     return _package_ci_tokens(root)
+
+
+def _typescript_ci_tokens(root: Path) -> tuple[str, ...]:
+    """Return required TypeScript CI tokens for the configured toolchain."""
+    tokens: list[str] = list(TYPESCRIPT_CI_TOKENS)
+    if tool_enabled(root, "biome"):
+        tokens.extend(("npm run format:check", "npm run lint"))
+    if tool_enabled(root, "vitest"):
+        tokens.extend(("npm test", "npm run coverage"))
+    return tuple(tokens)
+
+
+def _monorepo_ci_tokens(root: Path) -> tuple[str, ...]:
+    """Return required monorepo CI tokens for the configured toolchains."""
+    tokens: list[str] = list(MONOREPO_CI_TOKENS)
+    if tool_enabled(root, "ruff"):
+        tokens.append("ruff")
+    if tool_enabled(root, "mypy"):
+        tokens.append("mypy")
+    if tool_enabled(root, "pyright"):
+        tokens.append("pyright")
+    if tool_enabled(root, "biome"):
+        tokens.extend(("npm run ts:format:check", "npm run ts:lint"))
+    if tool_enabled(root, "vitest"):
+        tokens.extend(("npm run ts:test", "npm run ts:coverage"))
+    return tuple(tokens)
 
 
 def _readme_tool_tokens(profile: str) -> tuple[str, ...]:

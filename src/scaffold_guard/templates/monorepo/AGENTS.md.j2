@@ -21,13 +21,19 @@ These rules apply to every code, test, documentation, and configuration change i
 
 - Use `uv` for Python dependency management and command execution.
 - Keep generated Python code on Python `{{ python_min }}` or newer.
-- Use Ruff, mypy, Pyright, pytest, and coverage as configured in `pyproject.toml`.
+- Use {{ configured_tools }} as configured in `pyproject.toml`.
 
 ## TypeScript Tooling
 
 - Use `npm` for TypeScript package scripts and dependency installation.
-- Keep TypeScript strict mode enabled in `packages/typescript/tsconfig.json`.
-- Use Biome for formatting and linting, TypeScript for type checking, and Vitest for tests.
+- TypeScript compiler mode is configured in `packages/typescript/tsconfig.json`.
+{% if use_biome %}
+- Use Biome for formatting and linting.
+{% endif %}
+- Use TypeScript for type checking.
+{% if use_vitest %}
+- Use Vitest for tests and coverage.
+{% endif %}
 - Do not introduce `any`, broad casts, `// @ts-ignore`, or broad lint suppressions to hide failures.
 
 ## Testing Rules
@@ -61,17 +67,29 @@ scaffold-guard validate
 When debugging locally, the core commands are:
 
 ```bash
+{% if use_ruff %}
 uv run ruff format --check packages/python
 uv run ruff check packages/python
+{% endif %}
+{% if use_mypy %}
 uv run mypy packages/python/src packages/python/tests packages/python/examples
+{% endif %}
+{% if use_pyright %}
 uv run pyright
+{% endif %}
 uv run pytest packages/python/tests --cov={{ package_name }} --cov-report=term-missing --cov-fail-under={{ coverage }}
+{% if use_biome %}
 npm run ts:format:check
 npm run ts:lint
+{% endif %}
 npm run ts:typecheck
+{% if use_vitest %}
 npm run ts:test
+{% endif %}
 npm run ts:build
+{% if use_vitest %}
 npm run ts:coverage
+{% endif %}
 scaffold-guard check
 ```
 

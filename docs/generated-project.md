@@ -43,8 +43,9 @@ CLAUDE.md
 .cursor/rules/*.mdc
 ```
 
-The `typescript` profile creates a strict TypeScript package with npm scripts,
-TypeScript, Biome, Vitest, CI, and language-aware agent instructions:
+The `typescript` profile creates a TypeScript package with npm scripts,
+TypeScript, configurable compiler strictness, optional Biome, optional Vitest,
+CI, and language-aware agent instructions:
 
 ```text
 my_project/
@@ -54,12 +55,12 @@ my_project/
   package.json
   tsconfig.json
   tsconfig.build.json
-  biome.json
-  vitest.config.ts
+  biome.json  # when Biome is enabled
+  vitest.config.ts  # when Vitest is enabled
   scaffold-guard.toml
   .github/workflows/ci.yml  # or .gitlab-ci.yml
   src/index.ts
-  tests/index.test.ts
+  tests/index.test.ts  # when Vitest is enabled
 ```
 
 The `monorepo` profile creates one repository with Python and TypeScript
@@ -72,7 +73,7 @@ my_project/
   LICENSE
   pyproject.toml
   package.json
-  biome.json
+  biome.json  # when Biome is enabled
   pyrightconfig.json  # when Pyright is enabled
   scaffold-guard.toml
   .github/workflows/ci.yml  # or .gitlab-ci.yml
@@ -80,7 +81,7 @@ my_project/
   packages/python/tests/
   packages/python/examples/
   packages/typescript/src/
-  packages/typescript/tests/
+  packages/typescript/tests/  # when Vitest is enabled
 ```
 
 ## Configuration
@@ -116,7 +117,8 @@ scaffold-guard validate --quick
 scaffold-guard validate
 ```
 
-TypeScript projects use npm scripts for TypeScript, Biome, and Vitest:
+TypeScript projects use npm scripts for TypeScript and whichever optional
+TypeScript tools are enabled:
 
 ```bash
 npm install

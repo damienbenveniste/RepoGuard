@@ -15,11 +15,17 @@ jobs:
         with:
           node-version: "22"
       - run: npm install
+{% if use_biome %}
       - run: npm run format:check
       - run: npm run lint
+{% endif %}
       - run: npm run typecheck
+{% if use_vitest %}
       - run: npm test
+{% endif %}
       - run: npm run build
+{% if use_vitest %}
       - run: npm run coverage
+{% endif %}
       - run: uv tool install scaffold-guard
       - run: scaffold-guard check

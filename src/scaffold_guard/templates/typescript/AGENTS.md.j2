@@ -20,8 +20,14 @@ These rules apply to every code, test, documentation, and configuration change i
 ## TypeScript Tooling
 
 - Use `npm` for package scripts and dependency installation.
-- Keep TypeScript strict mode enabled in `tsconfig.json`.
-- Use Biome for formatting and linting, TypeScript for type checking, and Vitest for tests.
+- TypeScript compiler mode is configured in `tsconfig.json`.
+{% if use_biome %}
+- Use Biome for formatting and linting.
+{% endif %}
+- Use TypeScript for type checking.
+{% if use_vitest %}
+- Use Vitest for tests and coverage.
+{% endif %}
 - Do not introduce `any`, broad casts, `// @ts-ignore`, or broad lint suppressions to hide failures.
 - Prefer explicit interfaces, readonly data structures, discriminated unions, and narrow boundary parsing.
 
@@ -55,12 +61,18 @@ scaffold-guard validate
 When debugging locally, the core commands are:
 
 ```bash
+{% if use_biome %}
 npm run format:check
 npm run lint
+{% endif %}
 npm run typecheck
+{% if use_vitest %}
 npm test
+{% endif %}
 npm run build
+{% if use_vitest %}
 npm run coverage
+{% endif %}
 scaffold-guard check
 ```
 

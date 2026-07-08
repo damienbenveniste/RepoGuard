@@ -1,5 +1,5 @@
 ---
-description: "Strict TypeScript, Biome, and Vitest workflow rules."
+description: "TypeScript workflow rules."
 globs: "src/**/*.ts, tests/**/*.ts, packages/typescript/**/*.ts"
 alwaysApply: false
 ---
@@ -9,7 +9,13 @@ alwaysApply: false
 # TypeScript Rules
 
 - Use `npm run` scripts for TypeScript commands.
-- Keep `strict` TypeScript enabled.
+- Follow the compiler mode configured in `tsconfig.json`.
 - Do not add `any`, `// @ts-ignore`, broad casts, or broad suppressions.
 - Keep source in `src/` for TypeScript-only projects and `packages/typescript/src/` for monorepos.
-- Keep Biome, TypeScript, and Vitest validation green before claiming completion.
+- Keep TypeScript validation green before claiming completion.
+{% if use_biome %}
+- Keep Biome formatting and linting green when TypeScript files change.
+{% endif %}
+{% if use_vitest %}
+- Keep Vitest tests and coverage green when behavior changes.
+{% endif %}

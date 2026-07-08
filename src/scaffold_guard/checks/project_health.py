@@ -29,45 +29,11 @@ def _missing_required_paths(root: Path) -> list[CheckFinding]:
     ]
     profile = project_profile(root)
     if profile == "package":
-        required_paths.extend(
-            [
-                Path("pyproject.toml"),
-                Path("src"),
-                Path("tests"),
-            ]
-        )
-        if tool_enabled(root, "pyright"):
-            required_paths.append(Path("pyrightconfig.json"))
-        if docs_enabled(root):
-            required_paths.append(Path("docs"))
+        required_paths.extend(_package_required_paths(root))
     if profile == "typescript":
-        required_paths.extend(
-            [
-                Path("package.json"),
-                Path("tsconfig.json"),
-                Path("tsconfig.build.json"),
-                Path("biome.json"),
-                Path("vitest.config.ts"),
-                Path("src"),
-                Path("tests"),
-            ]
-        )
+        required_paths.extend(_typescript_required_paths(root))
     if profile == "monorepo":
-        required_paths.extend(
-            [
-                Path("pyproject.toml"),
-                Path("package.json"),
-                Path("biome.json"),
-                Path("packages/python/src"),
-                Path("packages/python/tests"),
-                Path("packages/typescript/package.json"),
-                Path("packages/typescript/vitest.config.ts"),
-                Path("packages/typescript/src"),
-                Path("packages/typescript/tests"),
-            ]
-        )
-        if tool_enabled(root, "pyright"):
-            required_paths.append(Path("pyrightconfig.json"))
+        required_paths.extend(_monorepo_required_paths(root))
     if github_actions_enabled(root):
         required_paths.append(Path(".github/workflows/ci.yml"))
     if gitlab_ci_enabled(root):
@@ -83,6 +49,58 @@ def _missing_required_paths(root: Path) -> list[CheckFinding]:
         for relative_path in required_paths
         if not (root / relative_path).exists()
     ]
+
+
+def _package_required_paths(root: Path) -> list[Path]:
+    """Return required paths for generated Python package projects."""
+    paths = [
+        Path("pyproject.toml"),
+        Path("src"),
+        Path("tests"),
+    ]
+    if tool_enabled(root, "pyright"):
+        paths.append(Path("pyrightconfig.json"))
+    if docs_enabled(root):
+        paths.append(Path("docs"))
+    return paths
+
+
+def _typescript_required_paths(root: Path) -> list[Path]:
+    """Return required paths for generated TypeScript package projects."""
+    paths = [
+        Path("package.json"),
+        Path("tsconfig.json"),
+        Path("tsconfig.build.json"),
+        Path("src"),
+    ]
+    if tool_enabled(root, "biome"):
+        paths.append(Path("biome.json"))
+    if tool_enabled(root, "vitest"):
+        paths.extend((Path("vitest.config.ts"), Path("tests")))
+    return paths
+
+
+def _monorepo_required_paths(root: Path) -> list[Path]:
+    """Return required paths for generated Python and TypeScript monorepos."""
+    paths = [
+        Path("pyproject.toml"),
+        Path("package.json"),
+        Path("packages/python/src"),
+        Path("packages/python/tests"),
+        Path("packages/typescript/package.json"),
+        Path("packages/typescript/tsconfig.json"),
+        Path("packages/typescript/tsconfig.build.json"),
+        Path("packages/typescript/src"),
+    ]
+    if tool_enabled(root, "biome"):
+        paths.append(Path("biome.json"))
+    if tool_enabled(root, "vitest"):
+        paths.extend(
+            (Path("packages/typescript/vitest.config.ts"), Path("packages/typescript/tests"))
+        )
+    if tool_enabled(root, "pyright"):
+        paths.append(Path("pyrightconfig.json"))
+    return paths
 
 
 def _check_claude_wrapper(root: Path) -> list[CheckFinding]:

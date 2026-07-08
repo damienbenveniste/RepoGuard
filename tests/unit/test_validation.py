@@ -88,6 +88,25 @@ def test_validation_commands_for_typescript_profile_use_npm_scripts(
     )
 
 
+def test_validation_commands_for_typescript_profile_respect_disabled_tools(
+    tmp_path: Path,
+    generated_project: Callable[..., Path],
+) -> None:
+    """TypeScript validation omits disabled Biome and Vitest commands."""
+    project_dir = generated_project(tmp_path, profile="typescript", biome=False, vitest=False)
+    config = load_generated_project_config(project_dir)
+
+    assert validation_commands(config, quick=True) == (
+        ("npm", "run", "typecheck"),
+        ("scaffold-guard", "check"),
+    )
+    assert validation_commands(config, quick=False) == (
+        ("npm", "run", "typecheck"),
+        ("npm", "run", "build"),
+        ("scaffold-guard", "check"),
+    )
+
+
 def test_validation_commands_for_monorepo_profile_cover_both_languages(
     tmp_path: Path,
     generated_project: Callable[..., Path],
@@ -119,6 +138,27 @@ def test_validation_commands_for_monorepo_profile_cover_both_languages(
     ) in full
     assert ("npm", "run", "ts:build") in full
     assert ("npm", "run", "ts:coverage") in full
+
+
+def test_validation_commands_for_monorepo_profile_respect_disabled_typescript_tools(
+    tmp_path: Path,
+    generated_project: Callable[..., Path],
+) -> None:
+    """Monorepo validation omits disabled TypeScript tool commands."""
+    project_dir = generated_project(tmp_path, profile="monorepo", biome=False, vitest=False)
+    config = load_generated_project_config(project_dir)
+
+    quick = validation_commands(config, quick=True)
+    full = validation_commands(config, quick=False)
+    quick_text = [" ".join(command) for command in quick]
+    full_text = [" ".join(command) for command in full]
+
+    assert ("npm", "run", "ts:typecheck") in quick
+    assert ("npm", "run", "ts:build") in full
+    assert "npm run ts:format:check" not in quick_text
+    assert "npm run ts:lint" not in quick_text
+    assert "npm run ts:test" not in quick_text
+    assert "npm run ts:coverage" not in full_text
 
 
 def test_validation_commands_respect_disabled_quality_tools(

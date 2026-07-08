@@ -37,6 +37,9 @@ class InitOptions:
     ruff_enabled: bool = True
     mypy_enabled: bool = True
     pyright_enabled: bool = True
+    typescript_strict_enabled: bool = True
+    biome_enabled: bool = True
+    vitest_enabled: bool = True
 
     @property
     def python_enabled(self) -> bool:

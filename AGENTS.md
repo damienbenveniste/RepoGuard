@@ -25,6 +25,10 @@ configuration change in this repository.
   automation path. Keep `.` as a compatibility alias for current-directory
   automation, but do not present it as the primary guided user flow. Do not add
   guided-only generation behavior without matching non-interactive flags.
+- Guided setup should present meaningful setup choices, not one yes/no prompt
+  per mature tool when a preset or scoped selector is clearer. Keep Python and
+  TypeScript tool prompts profile-aware, and keep generated files, config, CI,
+  validation, docs, and agent instructions synchronized with those choices.
 - Treat `scaffold_guard_v1_implementation_plan.md` as the source of current
   product scope and acceptance criteria until the plan is moved into formal docs.
 - Keep V1 focused on a developer CLI. Do not add a SaaS dashboard, telemetry,
@@ -131,8 +135,10 @@ configuration change in this repository.
 
 ## TypeScript Tooling
 
-- Generated TypeScript projects should use npm scripts, TypeScript strict mode,
-  Biome for formatting and linting, and Vitest for tests and coverage.
+- Generated TypeScript projects should use npm scripts and TypeScript compiler
+  checks. Strict compiler mode, Biome formatting/linting, and Vitest
+  tests/coverage are configurable generation choices; honor the selected tool
+  set everywhere instead of assuming they are always enabled.
 - Generated TypeScript-only projects should not include Python package tooling
   or Python-specific adapter rules.
 - Generated monorepos should keep Python code under `packages/python/` and

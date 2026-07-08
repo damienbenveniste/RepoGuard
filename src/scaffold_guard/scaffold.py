@@ -215,9 +215,20 @@ def with_quality_tools(
     ruff: bool,
     mypy: bool,
     pyright: bool,
+    typescript_strict: bool = True,
+    biome: bool = True,
+    vitest: bool = True,
 ) -> InitOptions:
     """Return init options with explicit generated quality-tool selections."""
-    return replace(options, ruff_enabled=ruff, mypy_enabled=mypy, pyright_enabled=pyright)
+    return replace(
+        options,
+        ruff_enabled=ruff,
+        mypy_enabled=mypy,
+        pyright_enabled=pyright,
+        typescript_strict_enabled=typescript_strict,
+        biome_enabled=biome,
+        vitest_enabled=vitest,
+    )
 
 
 def build_render_context(options: InitOptions) -> Mapping[str, object]:
@@ -232,7 +243,7 @@ def build_render_context(options: InitOptions) -> Mapping[str, object]:
             *(() if not options.pyright_enabled else ("Pyright",)),
             "pytest",
             "coverage",
-            "MkDocs",
+            *(() if not options.docs_enabled else ("MkDocs",)),
         )
     )
     return {
@@ -248,11 +259,17 @@ def build_render_context(options: InitOptions) -> Mapping[str, object]:
         "use_ruff": options.ruff_enabled,
         "use_mypy": options.mypy_enabled,
         "use_pyright": options.pyright_enabled,
+        "use_typescript_strict": options.typescript_strict_enabled,
+        "use_biome": options.biome_enabled,
+        "use_vitest": options.vitest_enabled,
         "use_python": options.python_enabled,
         "use_typescript": options.typescript_enabled,
         "ruff_enabled": _toml_bool(options.ruff_enabled),
         "mypy_enabled": _toml_bool(options.mypy_enabled),
         "pyright_enabled": _toml_bool(options.pyright_enabled),
+        "typescript_strict_enabled": _toml_bool(options.typescript_strict_enabled),
+        "biome_enabled": _toml_bool(options.biome_enabled),
+        "vitest_enabled": _toml_bool(options.vitest_enabled),
         "python_enabled": _toml_bool(options.python_enabled),
         "typescript_enabled": _toml_bool(options.typescript_enabled),
         "codex_enabled": _toml_bool(options.codex_enabled),
@@ -283,7 +300,7 @@ def render_file(
 def package_template_specs(options: InitOptions) -> tuple[TemplateSpec, ...]:
     """Return profile templates plus selected adapter templates."""
     adapter_specs = _adapter_template_specs(options)
-    profile_specs = _profile_template_specs(options)
+    profile_specs = _filtered_profile_template_specs(options)
     if options.profile == "package" and options.pyright_enabled:
         profile_specs = (
             *profile_specs,
@@ -295,6 +312,24 @@ def package_template_specs(options: InitOptions) -> tuple[TemplateSpec, ...]:
             TemplateSpec("monorepo/pyrightconfig.json.j2", "pyrightconfig.json"),
         )
     return (*profile_specs, *adapter_specs)
+
+
+def _filtered_profile_template_specs(options: InitOptions) -> tuple[TemplateSpec, ...]:
+    """Return profile templates after removing disabled optional tool files."""
+    profile_specs = _profile_template_specs(options)
+    skipped_destinations: set[str] = set()
+    if options.typescript_enabled and not options.biome_enabled:
+        skipped_destinations.add("biome.json")
+    if options.profile == "typescript" and not options.vitest_enabled:
+        skipped_destinations.update({"vitest.config.ts", "tests/index.test.ts"})
+    if options.profile == "monorepo" and not options.vitest_enabled:
+        skipped_destinations.update(
+            {
+                "packages/typescript/vitest.config.ts",
+                "packages/typescript/tests/index.test.ts",
+            }
+        )
+    return tuple(spec for spec in profile_specs if spec.destination not in skipped_destinations)
 
 
 def _adapter_template_specs(options: InitOptions) -> tuple[TemplateSpec, ...]:

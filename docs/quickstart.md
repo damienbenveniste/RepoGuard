@@ -25,7 +25,7 @@ Profile choices:
 |---|---|
 | `minimal` | Guardrails only; no Python or TypeScript source scaffold |
 | `package` | Python package scaffold with `src/`, tests, docs, and `uv` |
-| `typescript` | TypeScript package scaffold with npm, Biome, and Vitest |
+| `typescript` | TypeScript package scaffold with npm and configurable TypeScript tooling |
 | `monorepo` | Python + TypeScript workspaces under `packages/` |
 
 Generated projects include CI and local development defaults, but the
@@ -60,8 +60,8 @@ scaffold-guard init gitlab_demo --ci gitlab
 ```
 
 Use the `package` profile when you want a full Python package layout. Guided
-setup lets you keep or disable Ruff, mypy, and Pyright; all three are enabled
-by default.
+setup asks for Ruff and Python type-checking choices. Ruff, mypy, and Pyright
+are enabled by default.
 
 ```bash
 scaffold-guard init package_demo --guided
@@ -70,8 +70,9 @@ uv sync --all-groups
 scaffold-guard validate --quick
 ```
 
-Use the `typescript` profile when you want a strict TypeScript package with
-npm scripts, TypeScript, Biome, and Vitest:
+Use the `typescript` profile when you want a TypeScript package with npm
+scripts. Strict compiler mode, Biome, and Vitest are enabled by default and can
+be changed during guided setup or with flags:
 
 ```bash
 scaffold-guard init ts_demo --profile typescript
@@ -81,7 +82,7 @@ scaffold-guard validate --quick
 ```
 
 Use the `monorepo` profile when Python and TypeScript should live in one
-repository:
+repository. Guided setup asks for both Python and TypeScript tool choices:
 
 ```bash
 scaffold-guard init app_demo --profile monorepo

@@ -74,6 +74,8 @@ def test_typescript_source_change_requires_npm_validation(tmp_path: Path) -> Non
             package_name="demo",
             coverage=95,
             profile="typescript",
+            biome=True,
+            vitest=True,
         ),
     )
 
@@ -85,6 +87,31 @@ def test_typescript_source_change_requires_npm_validation(tmp_path: Path) -> Non
     assert any(area.label == "TypeScript source" for area in report.changed_areas)
     assert (
         "TypeScript source changed without a detected TypeScript tests/ change." in report.warnings
+    )
+
+
+def test_typescript_source_change_respects_disabled_optional_tools(tmp_path: Path) -> None:
+    """TypeScript source validation hints omit disabled Biome and Vitest commands."""
+    root = _generated_project(tmp_path, profile="typescript")
+
+    report = classify_changed_files(
+        root,
+        changed_files=(Path("src/index.ts"),),
+        base="main",
+        settings=ProjectValidationSettings(
+            package_name="demo",
+            coverage=95,
+            profile="typescript",
+            biome=False,
+            vitest=False,
+        ),
+    )
+
+    assert report.required_validation == ("npm run typecheck",)
+    assert "TypeScript tests changed or added for behavior change" not in report.required_evidence
+    assert (
+        "TypeScript source changed without a detected TypeScript tests/ change."
+        not in report.warnings
     )
 
 
@@ -104,6 +131,8 @@ def test_monorepo_source_changes_require_language_scoped_validation(tmp_path: Pa
             package_name="demo",
             coverage=95,
             profile="monorepo",
+            biome=True,
+            vitest=True,
         ),
     )
 
@@ -185,6 +214,8 @@ def test_package_json_change_warns_when_lockfile_exists_but_is_not_changed(tmp_p
             package_name="demo",
             coverage=95,
             profile="typescript",
+            biome=True,
+            vitest=True,
         ),
     )
 

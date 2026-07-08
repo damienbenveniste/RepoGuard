@@ -21,7 +21,7 @@ from scaffold_guard.checks.project_health import check_project_health
 from scaffold_guard.checks.runner import run_checks
 from scaffold_guard.checks.unsafe_patterns import check_unsafe_patterns
 from scaffold_guard.models import CiChoice, ProfileChoice
-from scaffold_guard.scaffold import build_init_options, scaffold_package_project
+from scaffold_guard.scaffold import build_init_options, scaffold_package_project, with_quality_tools
 
 
 def test_check_result_ok_ignores_warnings() -> None:
@@ -334,6 +334,15 @@ def test_project_health_requires_typescript_vitest_config(tmp_path: Path) -> Non
     assert any(finding.path == "vitest.config.ts" for finding in result.findings)
 
 
+def test_project_health_allows_disabled_typescript_optional_tools(tmp_path: Path) -> None:
+    """Disabled TypeScript tool files are not required by health checks."""
+    project_dir = _generated_project(tmp_path, profile="typescript", biome=False, vitest=False)
+
+    result = check_project_health(project_dir)
+
+    assert result.ok
+
+
 def test_project_health_requires_monorepo_profile_paths(tmp_path: Path) -> None:
     """Monorepo profile health checks require both language workspace roots."""
     project_dir = _generated_project(tmp_path, profile="monorepo")
@@ -356,6 +365,17 @@ def test_project_health_requires_monorepo_typescript_vitest_config(tmp_path: Pat
     assert any(
         finding.path == "packages/typescript/vitest.config.ts" for finding in result.findings
     )
+
+
+def test_project_health_allows_disabled_monorepo_typescript_optional_tools(
+    tmp_path: Path,
+) -> None:
+    """Disabled monorepo TypeScript tool files are not required by health checks."""
+    project_dir = _generated_project(tmp_path, profile="monorepo", biome=False, vitest=False)
+
+    result = check_project_health(project_dir)
+
+    assert result.ok
 
 
 def test_project_health_detects_claude_wrapper_without_agents_reference(tmp_path: Path) -> None:
@@ -652,6 +672,8 @@ def _generated_project(
     *,
     ci: CiChoice = "github",
     profile: ProfileChoice = "package",
+    biome: bool = True,
+    vitest: bool = True,
 ) -> Path:
     """Create a standard all-adapter generated project for checker tests."""
     options = build_init_options(
@@ -665,6 +687,14 @@ def _generated_project(
         ci=ci,
         dry_run=False,
         force=False,
+    )
+    options = with_quality_tools(
+        options,
+        ruff=True,
+        mypy=True,
+        pyright=True,
+        biome=biome,
+        vitest=vitest,
     )
     scaffold_package_project(options)
     return tmp_path / "demo"

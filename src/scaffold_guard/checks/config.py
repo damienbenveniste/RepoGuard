@@ -98,7 +98,7 @@ def tool_enabled(root: Path, name: str) -> bool:
     profile = project_profile(root)
     if name in {"ruff", "mypy", "pyright"}:
         return bool_value(tools, name, default=profile in {"package", "monorepo"})
-    if name in {"typescript", "biome", "vitest"}:
+    if name in {"typescript", "typescript_strict", "biome", "vitest"}:
         return bool_value(tools, name, default=profile in {"typescript", "monorepo"})
     return bool_value(tools, name, default=False)
 

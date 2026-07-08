@@ -8,18 +8,27 @@
     "packages/typescript"
   ],
   "scripts": {
+{% if use_biome %}
     "ts:format": "biome format --write packages/typescript",
     "ts:format:check": "biome ci packages/typescript",
     "ts:lint": "biome lint packages/typescript",
+{% endif %}
     "ts:typecheck": "tsc -p packages/typescript/tsconfig.json --noEmit",
+{% if use_vitest %}
     "ts:test": "vitest run --config packages/typescript/vitest.config.ts",
     "ts:coverage": "vitest run --config packages/typescript/vitest.config.ts --coverage",
+{% endif %}
     "ts:build": "tsc -p packages/typescript/tsconfig.build.json"
   },
   "devDependencies": {
+{% if use_biome %}
     "@biomejs/biome": "^2.2.0",
+{% endif %}
+{% if use_vitest %}
     "@vitest/coverage-v8": "^4.0.0",
-    "typescript": "^5.9.0",
+{% endif %}
+    "typescript": "^5.9.0"{% if use_vitest %},
     "vitest": "^4.0.0"
+{% endif %}
   }
 }

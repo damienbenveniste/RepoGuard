@@ -87,8 +87,9 @@ uv sync --all-groups
 scaffold-guard validate --quick
 ```
 
-Generate a strict TypeScript package when you want npm scripts, TypeScript,
-Biome, and Vitest:
+Generate a TypeScript package when you want npm scripts and configurable
+TypeScript tooling. Strict compiler mode, Biome, and Vitest are enabled by
+default and can be changed during guided setup or with flags:
 
 ```bash
 scaffold-guard init ts_demo --profile typescript
@@ -142,7 +143,8 @@ my_project/
   tests/integration/
 ```
 
-The `typescript` profile adds a strict TypeScript package scaffold:
+The `typescript` profile adds a TypeScript package scaffold with configurable
+compiler strictness, Biome, and Vitest defaults:
 
 ```text
 my_project/
@@ -152,12 +154,12 @@ my_project/
   package.json
   tsconfig.json
   tsconfig.build.json
-  biome.json
-  vitest.config.ts
+  biome.json  # when Biome is enabled
+  vitest.config.ts  # when Vitest is enabled
   scaffold-guard.toml
   .github/workflows/ci.yml  # or .gitlab-ci.yml
   src/
-  tests/
+  tests/  # when Vitest is enabled
 ```
 
 The `monorepo` profile adds Python and TypeScript workspaces:
@@ -169,7 +171,7 @@ my_project/
   LICENSE
   pyproject.toml
   package.json
-  biome.json
+  biome.json  # when Biome is enabled
   pyrightconfig.json  # when Pyright is enabled
   scaffold-guard.toml
   .github/workflows/ci.yml  # or .gitlab-ci.yml
@@ -189,7 +191,7 @@ Adapter files are added according to `--agent`:
 ## Commands
 
 ```bash
-scaffold-guard init [NAME] [--guided] [--profile minimal|package|typescript|monorepo] [--agent codex|claude|cursor|all] [--ci github|gitlab]
+scaffold-guard init [NAME] [--guided] [--profile minimal|package|typescript|monorepo] [--agent codex|claude|cursor|all] [--ci github|gitlab] [--ruff strict|off] [--python-typecheck mypy+pyright|mypy|pyright|off] [--typescript-mode strict|standard] [--typescript-lint biome|off] [--typescript-test vitest|off]
 scaffold-guard check [--path .] [--json]
 scaffold-guard inspect-diff [--path .] [--base main] [--json]
 scaffold-guard validate [--path .] [--quick] [--json]
@@ -204,7 +206,7 @@ Profile choices:
 |---|---|
 | `minimal` | Guardrails only; no Python or TypeScript source scaffold |
 | `package` | Python package scaffold with `src/`, tests, docs, and `uv` |
-| `typescript` | TypeScript package scaffold with npm, Biome, and Vitest |
+| `typescript` | TypeScript package scaffold with npm and configurable TypeScript tooling |
 | `monorepo` | Python + TypeScript workspaces under `packages/` |
 
 `check` runs fast policy checks. `inspect-diff` explains validation obligations

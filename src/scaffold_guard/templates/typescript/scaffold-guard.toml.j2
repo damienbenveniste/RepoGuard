@@ -24,8 +24,9 @@ ruff = false
 mypy = false
 pyright = false
 typescript = true
-biome = true
-vitest = true
+typescript_strict = {{ typescript_strict_enabled }}
+biome = {{ biome_enabled }}
+vitest = {{ vitest_enabled }}
 
 [policy]
 forbid_type_ignore = true
@@ -40,18 +41,28 @@ require_lockfile_for_dependency_changes = true
 
 [validation]
 quick = [
+{% if use_biome %}
   "npm run format:check",
   "npm run lint",
+{% endif %}
   "npm run typecheck",
+{% if use_vitest %}
   "npm test",
+{% endif %}
   "scaffold-guard check"
 ]
 full = [
+{% if use_biome %}
   "npm run format:check",
   "npm run lint",
+{% endif %}
   "npm run typecheck",
+{% if use_vitest %}
   "npm test",
+{% endif %}
   "npm run build",
+{% if use_vitest %}
   "npm run coverage",
+{% endif %}
   "scaffold-guard check"
 ]

@@ -16,18 +16,27 @@
     "dist"
   ],
   "scripts": {
+{% if use_biome %}
     "format": "biome format --write .",
     "format:check": "biome ci .",
     "lint": "biome lint .",
+{% endif %}
     "typecheck": "tsc --noEmit",
+{% if use_vitest %}
     "test": "vitest run",
     "coverage": "vitest run --coverage",
+{% endif %}
     "build": "tsc -p tsconfig.build.json"
   },
   "devDependencies": {
+{% if use_biome %}
     "@biomejs/biome": "^2.2.0",
+{% endif %}
+{% if use_vitest %}
     "@vitest/coverage-v8": "^4.0.0",
-    "typescript": "^5.9.0",
+{% endif %}
+    "typescript": "^5.9.0"{% if use_vitest %},
     "vitest": "^4.0.0"
+{% endif %}
   }
 }

@@ -11,10 +11,16 @@ test:
     - export PATH="$HOME/.local/bin:$PATH"
     - uv tool install scaffold-guard
   script:
+{% if use_biome %}
     - npm run format:check
     - npm run lint
+{% endif %}
     - npm run typecheck
+{% if use_vitest %}
     - npm test
+{% endif %}
     - npm run build
+{% if use_vitest %}
     - npm run coverage
+{% endif %}
     - scaffold-guard check

@@ -14,16 +14,24 @@ scaffold-guard validate
 ## TypeScript Commands
 
 ```bash
+{% if use_biome %}
 npm run format:check
 npm run lint
+{% endif %}
 npm run typecheck
+{% if use_vitest %}
 npm test
+{% endif %}
 npm run build
+{% if use_vitest %}
 npm run coverage
+{% endif %}
 ```
 
 ## Project Layout
 
 - `src/` contains TypeScript source.
+{% if use_vitest %}
 - `tests/` contains Vitest tests.
+{% endif %}
 - `AGENTS.md` contains shared coding-agent instructions.

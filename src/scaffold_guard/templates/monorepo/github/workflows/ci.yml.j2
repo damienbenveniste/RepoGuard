@@ -75,20 +75,26 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+{% if use_biome %}
       - name: Check TypeScript formatting
         run: npm run ts:format:check
 
       - name: Lint TypeScript
         run: npm run ts:lint
 
+{% endif %}
       - name: Type check TypeScript
         run: npm run ts:typecheck
 
+{% if use_vitest %}
       - name: Test TypeScript
         run: npm run ts:test
 
+{% endif %}
       - name: Build TypeScript
         run: npm run ts:build
 
+{% if use_vitest %}
       - name: Check TypeScript coverage
         run: npm run ts:coverage
+{% endif %}
