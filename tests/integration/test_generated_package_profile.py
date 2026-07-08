@@ -764,7 +764,11 @@ def test_init_help_explains_profile_choices() -> None:
     assert "monorepo" in result.output
     assert "workspaces" in result.output
     assert "Generated Python Ruff" in result.output
-    assert "strict|standard|off" in result.output
+    assert "--ruff" in result.output
+    assert "--python-typecheck" in result.output
+    assert "strict" in result.output
+    assert "standard" in result.output
+    assert "off" in result.output
     assert "type-checking" in result.output
     assert "strictness" in result.output
     assert "--python-typechecker" in result.output
