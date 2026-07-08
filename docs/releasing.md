@@ -22,7 +22,7 @@ Actions before PyPI upload completes.
    ```bash
    git switch main
    git pull --ff-only
-   git switch -c release/v0.1.1
+   git switch -c release/vX.Y.Z
    ```
 
 2. Bump the release version:
@@ -32,7 +32,6 @@ Actions before PyPI upload completes.
    src/scaffold_guard/__init__.py
    uv.lock
    CHANGELOG.md
-   docs/releasing.md
    ```
 
    Run `uv lock` after changing `pyproject.toml`.
@@ -42,8 +41,8 @@ Actions before PyPI upload completes.
 4. Push the branch and open a pull request into `main`:
 
    ```bash
-   git push -u origin release/v0.1.1
-   gh pr create --base main --title "Release v0.1.1"
+   git push -u origin release/vX.Y.Z
+   gh pr create --base main --title "Release vX.Y.Z"
    ```
 
 5. Wait for CI, then squash-merge the pull request.
@@ -51,9 +50,9 @@ Actions before PyPI upload completes.
 6. Create the GitHub Release from `main`:
 
    ```bash
-   gh release create v0.1.1 \
+   gh release create vX.Y.Z \
      --target main \
-     --title "v0.1.1" \
+     --title "vX.Y.Z" \
      --notes-file CHANGELOG.md
    ```
 
@@ -87,7 +86,7 @@ uv build
 ## Inspect The Wheel
 
 ```bash
-VERSION=0.1.1
+VERSION=X.Y.Z
 python -m zipfile -l "dist/scaffold_guard-${VERSION}-py3-none-any.whl" | grep templates
 tmpdir=$(mktemp -d)
 python -m venv "$tmpdir/venv"
