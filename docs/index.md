@@ -20,6 +20,9 @@ Python, TypeScript, or mixed Python+TypeScript starter layouts.
 - `scaffold-guard inspect-diff` for diff-specific validation guidance.
 - `scaffold-guard validate`, `compile-rules`, `doctor`, and `version`.
 
+See the [command reference](commands.md) for when to use each command, available
+options, and exit-code behavior.
+
 ## Basic Flow
 
 This example assumes you enter `my_project` as the project name during guided
@@ -48,5 +51,5 @@ should use GitLab CI instead of GitHub Actions.
 Generated projects include CI and local development defaults, but the
 user-facing CLI remains the installed `scaffold-guard` command.
 
-Read the quickstart first, then use the adapter and checks pages when tuning a
-generated project.
+Read the quickstart first, then use the command reference, adapter, and checks
+pages when tuning a generated project.

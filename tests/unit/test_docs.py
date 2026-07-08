@@ -12,6 +12,7 @@ CODEX_ADAPTER_DOCS = (
     Path("docs/adapters.md"),
     Path("docs/generated-project.md"),
 )
+COMMAND_REFERENCE_DOC = Path("docs/commands.md")
 
 
 def test_public_install_docs_use_installed_scaffold_guard_command() -> None:
@@ -41,3 +42,29 @@ def test_codex_adapter_docs_describe_layered_file_responsibilities() -> None:
 
         for phrase in expected_phrases:
             assert phrase in content
+
+
+def test_command_reference_documents_user_facing_cli_commands() -> None:
+    """The docs should explain the public command surface beyond init."""
+    nav_content = Path("mkdocs.yml").read_text(encoding="utf-8")
+    command_content = COMMAND_REFERENCE_DOC.read_text(encoding="utf-8")
+
+    assert "Command Reference: commands.md" in nav_content
+
+    expected_phrases = (
+        "scaffold-guard check",
+        "Run fast local policy checks",
+        "scaffold-guard inspect-diff",
+        "Report which validation evidence is expected",
+        "scaffold-guard validate",
+        "Run the validation commands configured",
+        "scaffold-guard compile-rules",
+        "Regenerate managed agent instruction files",
+        "scaffold-guard doctor",
+        "Report local environment and generated-project health",
+        "scaffold-guard version",
+        "Print the installed ScaffoldGuard version",
+    )
+
+    for phrase in expected_phrases:
+        assert phrase in command_content

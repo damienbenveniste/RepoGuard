@@ -19,6 +19,9 @@ scaffold-guard check
 scaffold-guard validate --quick
 ```
 
+Use the [command reference](commands.md) for the full CLI surface, including
+`inspect-diff`, `validate`, `compile-rules`, `doctor`, and `version`.
+
 Profile choices:
 
 | Profile | Meaning |

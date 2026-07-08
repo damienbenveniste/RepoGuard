@@ -9,6 +9,7 @@ theme:
 nav:
   - Home: index.md
   - Quickstart: quickstart.md
+  - Command Reference: commands.md
   - Agent Adapters: adapters.md
   - Generated Project: generated-project.md
   - Checks: checks.md
