@@ -1,0 +1,106 @@
+# Repo-local Codex command policy for ScaffoldGuard git operations.
+
+prefix_rule(
+    pattern = ["git", "status"],
+    decision = "allow",
+    justification = "Inspecting repository status is safe and expected.",
+    match = ["git status", "git status --short", "git status --short --branch"],
+)
+
+prefix_rule(
+    pattern = ["git", "diff"],
+    decision = "allow",
+    justification = "Inspecting local diffs is safe and expected.",
+    match = ["git diff", "git diff --check", "git diff --stat", "git diff -- .codex"],
+)
+
+prefix_rule(
+    pattern = ["git", "log"],
+    decision = "allow",
+    justification = "Reading commit history is safe and expected.",
+    match = ["git log --oneline -5", "git log --stat -5"],
+)
+
+prefix_rule(
+    pattern = ["git", "show"],
+    decision = "allow",
+    justification = "Reading commit or object content is safe and expected.",
+    match = ["git show --stat", "git show HEAD"],
+)
+
+prefix_rule(
+    pattern = ["git", "rev-parse"],
+    decision = "allow",
+    justification = "Resolving repository paths and revisions is safe and expected.",
+    match = ["git rev-parse --show-toplevel", "git rev-parse --abbrev-ref HEAD"],
+)
+
+prefix_rule(
+    pattern = ["git", "branch", "--show-current"],
+    decision = "allow",
+    justification = "Inspecting the current branch is safe and expected.",
+    match = ["git branch --show-current"],
+)
+
+prefix_rule(
+    pattern = ["git", "add"],
+    decision = "prompt",
+    justification = "Staging changes should remain an explicit user decision.",
+    match = ["git add .codex"],
+)
+
+prefix_rule(
+    pattern = ["git", "commit"],
+    decision = "prompt",
+    justification = "Committing changes should remain an explicit user decision.",
+    match = ["git commit -m update-codex-config"],
+)
+
+prefix_rule(
+    pattern = ["git", "push"],
+    decision = "prompt",
+    justification = "Publishing changes should remain an explicit user decision.",
+    match = ["git push origin codex/add-repo-local-codex-config"],
+)
+
+prefix_rule(
+    pattern = ["git", "reset", "--hard"],
+    decision = "forbidden",
+    justification = "Do not discard local work. Use a reviewed, targeted revert instead.",
+    match = ["git reset --hard"],
+)
+
+prefix_rule(
+    pattern = ["git", "checkout", "--"],
+    decision = "forbidden",
+    justification = "Do not discard local file changes with checkout.",
+    match = ["git checkout -- ."],
+)
+
+prefix_rule(
+    pattern = ["git", "restore"],
+    decision = "forbidden",
+    justification = "Do not discard local file changes with restore unless the user explicitly asks.",
+    match = ["git restore .", "git restore --source HEAD ."],
+)
+
+prefix_rule(
+    pattern = ["git", "clean", "-fdx"],
+    decision = "forbidden",
+    justification = "Do not bulk-delete untracked files. Remove reviewed generated artifacts by path.",
+    match = ["git clean -fdx"],
+)
+
+prefix_rule(
+    pattern = ["git", "push", "--force"],
+    decision = "forbidden",
+    justification = "Force pushes can rewrite shared history and require explicit maintainer control.",
+    match = ["git push --force"],
+)
+
+prefix_rule(
+    pattern = ["rm", "-rf"],
+    decision = "forbidden",
+    justification = "Do not recursively remove paths without a narrower reviewed command.",
+    match = ["rm -rf build"],
+)

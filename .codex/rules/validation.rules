@@ -1,0 +1,99 @@
+# Repo-local Codex command policy for ScaffoldGuard validation.
+
+prefix_rule(
+    pattern = ["uv", "sync", "--all-groups"],
+    decision = "allow",
+    justification = "Synchronizing the repository development environment is expected validation setup.",
+    match = ["uv sync --all-groups", "uv sync --all-groups --frozen"],
+)
+
+prefix_rule(
+    pattern = ["uv", "run", "ruff", "format", "--check", "."],
+    decision = "allow",
+    justification = "Ruff format checks are expected read-only validation.",
+    match = ["uv run ruff format --check ."],
+)
+
+prefix_rule(
+    pattern = ["uv", "run", "ruff", "check", "."],
+    decision = "allow",
+    justification = "Ruff lint checks are expected validation.",
+    match = ["uv run ruff check ."],
+    not_match = ["uv run ruff check --fix .", "uv run ruff check . --fix"],
+)
+
+prefix_rule(
+    pattern = ["uv", "run", "mypy", "src", "tests"],
+    decision = "allow",
+    justification = "mypy checks are expected validation.",
+    match = ["uv run mypy src tests"],
+)
+
+prefix_rule(
+    pattern = ["uv", "run", "pyright"],
+    decision = "allow",
+    justification = "Pyright checks are expected validation.",
+    match = ["uv run pyright"],
+)
+
+prefix_rule(
+    pattern = ["uv", "run", "pytest", "tests"],
+    decision = "allow",
+    justification = "pytest coverage checks are expected validation.",
+    match = [
+        "uv run pytest tests",
+        "uv run pytest tests --cov=scaffold_guard --cov-report=term-missing --cov-fail-under=95",
+    ],
+)
+
+prefix_rule(
+    pattern = ["uv", "run", "mkdocs", "build", "--strict"],
+    decision = "allow",
+    justification = "Strict MkDocs builds are expected documentation validation.",
+    match = ["uv run mkdocs build --strict"],
+)
+
+# The repository root is the ScaffoldGuard package source, not a generated
+# project, so it intentionally has no scaffold-guard.toml. Run generated-project
+# checks only inside generated fixtures or sandboxes that include that config.
+prefix_rule(
+    pattern = ["scaffold-guard", "check"],
+    decision = "prompt",
+    justification = "Run generated-project policy checks only against a scaffold containing scaffold-guard.toml.",
+    match = ["scaffold-guard check --path path/to/generated-project"],
+)
+
+prefix_rule(
+    pattern = ["scaffold-guard", "inspect-diff"],
+    decision = "allow",
+    justification = "Diff inspection is expected validation before claiming completion.",
+    match = ["scaffold-guard inspect-diff", "scaffold-guard inspect-diff --path ."],
+)
+
+prefix_rule(
+    pattern = ["scaffold-guard", "validate"],
+    decision = "prompt",
+    justification = "Run generated-project validation only against a scaffold containing scaffold-guard.toml.",
+    match = ["scaffold-guard validate --quick --path path/to/generated-project"],
+)
+
+prefix_rule(
+    pattern = ["uv", "run", "scaffold-guard", "check"],
+    decision = "prompt",
+    justification = "Run generated-project policy checks only against a scaffold containing scaffold-guard.toml.",
+    match = ["uv run scaffold-guard check --path path/to/generated-project"],
+)
+
+prefix_rule(
+    pattern = ["uv", "run", "scaffold-guard", "inspect-diff"],
+    decision = "allow",
+    justification = "Repository-local diff inspection is expected validation.",
+    match = ["uv run scaffold-guard inspect-diff", "uv run scaffold-guard inspect-diff --path ."],
+)
+
+prefix_rule(
+    pattern = ["uv", "run", "scaffold-guard", "validate"],
+    decision = "prompt",
+    justification = "Run generated-project validation only against a scaffold containing scaffold-guard.toml.",
+    match = ["uv run scaffold-guard validate --quick --path path/to/generated-project"],
+)

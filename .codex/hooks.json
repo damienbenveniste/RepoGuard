@@ -1,0 +1,59 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "apply_patch|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/bin/sh -c 'root=\"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"; hook=\"$root/.codex/hooks/workflow-evidence.sh\"; if [ -f \"$hook\" ]; then /bin/sh \"$hook\" post-tool-use \"$root\" edit; else echo \"RepoGuard Codex: workflow evidence hook missing: $hook\" >&2; fi'",
+            "timeout": 15,
+            "statusMessage": "RepoGuard Codex: recording edit workflow evidence"
+          },
+          {
+            "type": "command",
+            "command": "/bin/sh -c 'root=\"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"; git -C \"$root\" diff --check -- .'",
+            "timeout": 30,
+            "statusMessage": "RepoGuard Codex: checking whitespace in local diff"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/bin/sh -c 'root=\"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"; hook=\"$root/.codex/hooks/workflow-evidence.sh\"; if [ -f \"$hook\" ]; then /bin/sh \"$hook\" subagent-start \"$root\" subagent; else echo \"RepoGuard Codex: workflow evidence hook missing: $hook\" >&2; fi'",
+            "timeout": 15,
+            "statusMessage": "RepoGuard Codex: recording subagent start evidence"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/bin/sh -c 'root=\"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"; hook=\"$root/.codex/hooks/workflow-evidence.sh\"; if [ -f \"$hook\" ]; then /bin/sh \"$hook\" subagent-stop \"$root\" subagent; else echo \"RepoGuard Codex: workflow evidence hook missing: $hook\" >&2; fi'",
+            "timeout": 15,
+            "statusMessage": "RepoGuard Codex: recording subagent stop evidence"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/bin/sh -c 'root=\"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"; hook=\"$root/.codex/hooks/workflow-evidence.sh\"; if [ -f \"$hook\" ]; then /bin/sh \"$hook\" stop \"$root\" turn; else echo \"RepoGuard Codex: workflow evidence hook missing: $hook\" >&2; fi'",
+            "timeout": 15,
+            "statusMessage": "RepoGuard Codex: recording stop evidence"
+          }
+        ]
+      }
+    ]
+  }
+}
