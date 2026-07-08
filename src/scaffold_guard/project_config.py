@@ -11,9 +11,18 @@ from scaffold_guard.checks.config import (
     str_value,
     table_value,
 )
-from scaffold_guard.models import AgentChoice, CiChoice, InitOptions, ProfileChoice
+from scaffold_guard.models import (
+    CANONICAL_PROFILES,
+    AgentChoice,
+    CiChoice,
+    InitOptions,
+    ProfileChoice,
+    normalize_profile_choice,
+    profile_includes_python,
+    profile_includes_typescript,
+)
 
-SUPPORTED_PROFILES: tuple[ProfileChoice, ...] = ("minimal", "package")
+SUPPORTED_PROFILES = CANONICAL_PROFILES | {"package"}
 SUPPORTED_CI: tuple[CiChoice, ...] = ("github", "gitlab")
 
 
@@ -41,6 +50,19 @@ class GeneratedProjectConfig:
     ruff: bool
     mypy: bool
     pyright: bool
+    typescript_strict: bool
+    biome: bool
+    vitest: bool
+
+    @property
+    def python(self) -> bool:
+        """Return whether the generated project includes Python package code."""
+        return profile_includes_python(self.profile)
+
+    @property
+    def typescript(self) -> bool:
+        """Return whether the generated project includes TypeScript package code."""
+        return profile_includes_typescript(self.profile)
 
     @property
     def agent_choice(self) -> AgentChoice:
@@ -71,10 +93,27 @@ class GeneratedProjectConfig:
             ruff_enabled=self.ruff,
             mypy_enabled=self.mypy,
             pyright_enabled=self.pyright,
+            typescript_strict_enabled=self.typescript_strict,
+            biome_enabled=self.biome,
+            vitest_enabled=self.vitest,
         )
 
     def to_json(self) -> dict[str, object]:
         """Return JSON-serializable project config fields."""
+        tools: dict[str, object] = {
+            "ruff": self.ruff,
+            "mypy": self.mypy,
+            "pyright": self.pyright,
+        }
+        if self.typescript:
+            tools.update(
+                {
+                    "typescript": True,
+                    "typescript_strict": self.typescript_strict,
+                    "biome": self.biome,
+                    "vitest": self.vitest,
+                }
+            )
         return {
             "name": self.name,
             "package": self.package,
@@ -92,11 +131,7 @@ class GeneratedProjectConfig:
                 "github_actions": self.github_actions,
                 "gitlab_ci": self.gitlab_ci,
             },
-            "tools": {
-                "ruff": self.ruff,
-                "mypy": self.mypy,
-                "pyright": self.pyright,
-            },
+            "tools": tools,
         }
 
 
@@ -117,7 +152,8 @@ def load_generated_project_config(root: Path) -> GeneratedProjectConfig:
     name = _required_str(project, "name")
     package = _required_str(project, "package")
     profile = _required_profile(project, "profile")
-    tool_default = profile == "package"
+    python_tool_default = profile_includes_python(profile)
+    typescript_tool_default = profile_includes_typescript(profile)
     ci = _optional_ci(project, features)
     python_min = _required_str(project, "python_min")
     coverage = _required_int(project, "coverage_fail_under")
@@ -135,9 +171,16 @@ def load_generated_project_config(root: Path) -> GeneratedProjectConfig:
         docs=bool_value(features, "docs", default=True),
         github_actions=bool_value(features, "github_actions", default=ci == "github"),
         gitlab_ci=bool_value(features, "gitlab_ci", default=ci == "gitlab"),
-        ruff=bool_value(tools, "ruff", default=tool_default),
-        mypy=bool_value(tools, "mypy", default=tool_default),
-        pyright=bool_value(tools, "pyright", default=tool_default),
+        ruff=bool_value(tools, "ruff", default=python_tool_default),
+        mypy=bool_value(tools, "mypy", default=python_tool_default),
+        pyright=bool_value(tools, "pyright", default=python_tool_default),
+        typescript_strict=bool_value(
+            tools,
+            "typescript_strict",
+            default=typescript_tool_default,
+        ),
+        biome=bool_value(tools, "biome", default=typescript_tool_default),
+        vitest=bool_value(tools, "vitest", default=typescript_tool_default),
     )
 
 
@@ -154,7 +197,7 @@ def _required_profile(table: Mapping[str, object], key: str) -> ProfileChoice:
     """Return a required supported profile field from a TOML table."""
     value = _required_str(table, key)
     if value in SUPPORTED_PROFILES:
-        return value
+        return normalize_profile_choice(value)
     msg = f"Unsupported generated project profile: {value}"
     raise ProjectConfigError(msg)
 

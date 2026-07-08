@@ -17,11 +17,14 @@ def generated_project() -> Callable[..., Path]:
         tmp_path: Path,
         *,
         agent: AgentChoice = "all",
-        profile: ProfileChoice = "package",
+        profile: ProfileChoice = "python",
         ci: CiChoice = "github",
         ruff: bool = True,
         mypy: bool = True,
         pyright: bool = True,
+        typescript_strict: bool = True,
+        biome: bool = True,
+        vitest: bool = True,
     ) -> Path:
         options = build_init_options(
             "demo",
@@ -35,7 +38,15 @@ def generated_project() -> Callable[..., Path]:
             dry_run=False,
             force=False,
         )
-        options = with_quality_tools(options, ruff=ruff, mypy=mypy, pyright=pyright)
+        options = with_quality_tools(
+            options,
+            ruff=ruff,
+            mypy=mypy,
+            pyright=pyright,
+            typescript_strict=typescript_strict,
+            biome=biome,
+            vitest=vitest,
+        )
         scaffold_package_project(options)
         return tmp_path / "demo"
 

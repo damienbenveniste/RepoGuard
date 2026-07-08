@@ -51,6 +51,45 @@ BASE_MINIMAL_FILES = {
 BASE_MINIMAL_GITLAB_FILES = (BASE_MINIMAL_FILES - {Path(".github/workflows/ci.yml")}) | {
     Path(".gitlab-ci.yml")
 }
+BASE_TYPESCRIPT_FILES = {
+    Path("AGENTS.md"),
+    Path("README.md"),
+    Path("LICENSE"),
+    Path("package.json"),
+    Path("tsconfig.json"),
+    Path("tsconfig.build.json"),
+    Path("biome.json"),
+    Path("vitest.config.ts"),
+    Path(".gitignore"),
+    Path(".github/workflows/ci.yml"),
+    Path("src/index.ts"),
+    Path("tests/index.test.ts"),
+    Path("scaffold-guard.toml"),
+}
+BASE_MONOREPO_FILES = {
+    Path("AGENTS.md"),
+    Path("README.md"),
+    Path("LICENSE"),
+    Path("pyproject.toml"),
+    Path("pyrightconfig.json"),
+    Path("package.json"),
+    Path("biome.json"),
+    Path(".gitignore"),
+    Path(".github/workflows/ci.yml"),
+    Path("packages/python/examples/hello.py"),
+    Path("packages/python/src/demo/__init__.py"),
+    Path("packages/python/src/demo/core.py"),
+    Path("packages/python/src/demo/py.typed"),
+    Path("packages/python/tests/unit/test_core.py"),
+    Path("packages/python/tests/integration/test_import_package.py"),
+    Path("packages/typescript/package.json"),
+    Path("packages/typescript/tsconfig.json"),
+    Path("packages/typescript/tsconfig.build.json"),
+    Path("packages/typescript/vitest.config.ts"),
+    Path("packages/typescript/src/index.ts"),
+    Path("packages/typescript/tests/index.test.ts"),
+    Path("scaffold-guard.toml"),
+}
 
 
 class GreetingPackage(Protocol):
@@ -68,7 +107,7 @@ def test_init_codex_generates_valid_package_tree(
     """The codex adapter creates a base package tree with only AGENTS.md."""
     monkeypatch.chdir(tmp_path)
 
-    result = CliRunner().invoke(app, ["init", "demo", "--profile", "package", "--agent", "codex"])
+    result = CliRunner().invoke(app, ["init", "demo", "--profile", "python", "--agent", "codex"])
 
     assert result.exit_code == SUCCESS, result.output
     project_dir = tmp_path / "demo"
@@ -76,7 +115,9 @@ def test_init_codex_generates_valid_package_tree(
     assert not (project_dir / "CLAUDE.md").exists()
     assert not (project_dir / ".claude").exists()
     assert not (project_dir / ".cursor").exists()
-    assert "Created ScaffoldGuard package project: demo" in result.output
+    config = tomllib.loads((project_dir / "scaffold-guard.toml").read_text(encoding="utf-8"))
+    assert config["project"]["profile"] == "python"
+    assert "Created ScaffoldGuard python project: demo" in result.output
     assert "Codex: AGENTS.md" in result.output
     agents = (project_dir / "AGENTS.md").read_text(encoding="utf-8")
     assert "dataclass(frozen=True, slots=True)" in agents
@@ -92,6 +133,23 @@ def test_init_codex_generates_valid_package_tree(
     with _import_from_project(project_dir):
         package = cast(GreetingPackage, importlib.import_module("demo"))
         assert package.greet("Codex") == "Hello, Codex!"
+
+
+def test_init_accepts_legacy_package_profile_alias(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The old non-interactive package profile still generates a Python project."""
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(app, ["init", "demo", "--profile", "package", "--agent", "codex"])
+
+    assert result.exit_code == SUCCESS, result.output
+    project_dir = tmp_path / "demo"
+    config = tomllib.loads((project_dir / "scaffold-guard.toml").read_text(encoding="utf-8"))
+    assert config["project"]["profile"] == "python"
+    assert (project_dir / "src/demo/core.py").exists()
+    assert "Created ScaffoldGuard python project: demo" in result.output
 
 
 def test_init_can_generate_minimal_gitlab_ci_project(
@@ -114,16 +172,16 @@ def test_init_can_generate_minimal_gitlab_ci_project(
     assert "CI:\n  - gitlab" in result.output
 
 
-def test_init_can_generate_package_gitlab_ci_project(
+def test_init_can_generate_python_gitlab_ci_project(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The package profile can generate GitLab CI instead of GitHub Actions."""
+    """The Python profile can generate GitLab CI instead of GitHub Actions."""
     monkeypatch.chdir(tmp_path)
 
     result = CliRunner().invoke(
         app,
-        ["init", "demo", "--profile", "package", "--agent", "codex", "--ci", "gitlab"],
+        ["init", "demo", "--profile", "python", "--agent", "codex", "--ci", "gitlab"],
     )
 
     assert result.exit_code == SUCCESS, result.output
@@ -137,17 +195,210 @@ def test_init_can_generate_package_gitlab_ci_project(
     assert "uv run pytest tests --cov=demo" in gitlab_ci
 
 
-def test_init_package_can_disable_quality_tools(
+def test_init_can_generate_typescript_profile(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Package scaffolds can opt out of Ruff, mypy, and Pyright."""
+    """The TypeScript profile creates a strict npm-based package scaffold."""
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(
+        app,
+        ["init", "demo", "--profile", "typescript", "--agent", "codex"],
+    )
+
+    assert result.exit_code == SUCCESS, result.output
+    project_dir = tmp_path / "demo"
+    assert _relative_files(project_dir) == BASE_TYPESCRIPT_FILES
+    assert not (project_dir / "pyproject.toml").exists()
+    assert not (project_dir / ".claude").exists()
+    assert not (project_dir / ".cursor").exists()
+    package_json = json.loads((project_dir / "package.json").read_text(encoding="utf-8"))
+    config = tomllib.loads((project_dir / "scaffold-guard.toml").read_text(encoding="utf-8"))
+    assert package_json["scripts"]["typecheck"] == "tsc --noEmit"
+    assert package_json["devDependencies"]["@biomejs/biome"].startswith("^2.")
+    assert config["project"]["profile"] == "typescript"
+    assert config["features"]["typescript"] is True
+    assert config["tools"]["biome"] is True
+    assert "npm install" in result.output
+    assert "uv sync --all-groups" not in result.output
+    _assert_no_unresolved_project_placeholders(project_dir)
+
+
+def test_init_typescript_profile_can_disable_optional_tools(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """TypeScript scaffolds can opt out of Biome, Vitest, and strict mode."""
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "init",
+            "demo",
+            "--profile",
+            "typescript",
+            "--agent",
+            "codex",
+            "--typescript-mode",
+            "standard",
+            "--typescript-lint",
+            "off",
+            "--typescript-test",
+            "off",
+        ],
+    )
+
+    assert result.exit_code == SUCCESS, result.output
+    project_dir = tmp_path / "demo"
+    files = _relative_files(project_dir)
+    package_json = json.loads((project_dir / "package.json").read_text(encoding="utf-8"))
+    tsconfig = json.loads((project_dir / "tsconfig.json").read_text(encoding="utf-8"))
+    ci_workflow = (project_dir / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+    readme = (project_dir / "README.md").read_text(encoding="utf-8")
+    agents = (project_dir / "AGENTS.md").read_text(encoding="utf-8")
+    config = tomllib.loads((project_dir / "scaffold-guard.toml").read_text(encoding="utf-8"))
+
+    assert Path("biome.json") not in files
+    assert Path("vitest.config.ts") not in files
+    assert Path("tests/index.test.ts") not in files
+    assert set(package_json["scripts"]) == {"typecheck", "build"}
+    assert set(package_json["devDependencies"]) == {"typescript"}
+    assert tsconfig["compilerOptions"]["strict"] is False
+    assert tsconfig["include"] == ["src/**/*.ts"]
+    assert config["tools"]["typescript_strict"] is False
+    assert config["tools"]["biome"] is False
+    assert config["tools"]["vitest"] is False
+    assert "npm run format:check" not in ci_workflow
+    assert "npm test" not in ci_workflow
+    assert "npm run coverage" not in ci_workflow
+    assert "npm run typecheck" in ci_workflow
+    assert "npm run build" in ci_workflow
+    assert "npm run format:check" not in readme
+    assert "npm test" not in agents
+    assert "Biome: disabled" in result.output
+    assert "Vitest: disabled" in result.output
+
+
+def test_check_passes_in_fresh_typescript_project(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A fresh TypeScript project passes ScaffoldGuard policy checks."""
+    monkeypatch.chdir(tmp_path)
+    init_result = CliRunner().invoke(
+        app,
+        ["init", "demo", "--profile", "typescript", "--agent", "all"],
+    )
+
+    assert init_result.exit_code == SUCCESS, init_result.output
+
+    check_result = CliRunner().invoke(app, ["check", "--path", "demo"])
+
+    assert check_result.exit_code == SUCCESS, check_result.output
+    files = _relative_files(tmp_path / "demo")
+    assert Path(".claude/rules/typescript.md") in files
+    assert Path(".cursor/rules/typescript.mdc") in files
+    assert Path(".claude/rules/python.md") not in files
+    assert Path(".cursor/rules/python.mdc") not in files
+
+
+def test_init_can_generate_python_typescript_monorepo_profile(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The monorepo profile creates Python and TypeScript package workspaces."""
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(
+        app,
+        ["init", "demo", "--profile", "monorepo", "--agent", "codex"],
+    )
+
+    assert result.exit_code == SUCCESS, result.output
+    project_dir = tmp_path / "demo"
+    assert _relative_files(project_dir) == BASE_MONOREPO_FILES
+    pyproject = (project_dir / "pyproject.toml").read_text(encoding="utf-8")
+    package_json = json.loads((project_dir / "package.json").read_text(encoding="utf-8"))
+    biome_json = json.loads((project_dir / "biome.json").read_text(encoding="utf-8"))
+    config = tomllib.loads((project_dir / "scaffold-guard.toml").read_text(encoding="utf-8"))
+    assert 'packages = ["packages/python/src/demo"]' in pyproject
+    assert package_json["workspaces"] == ["packages/typescript"]
+    assert package_json["scripts"]["ts:typecheck"].startswith("tsc -p packages/typescript")
+    assert biome_json["files"]["includes"] == [
+        "packages/typescript/**",
+        "!!packages/typescript/dist",
+        "!!packages/typescript/coverage",
+    ]
+    assert config["project"]["profile"] == "monorepo"
+    assert config["features"]["python"] is True
+    assert config["features"]["typescript"] is True
+    assert "uv sync --all-groups" in result.output
+    assert "npm install" in result.output
+    _assert_no_unresolved_project_placeholders(project_dir)
+    _assert_python_files_compile(project_dir)
+
+
+def test_init_monorepo_profile_can_disable_typescript_optional_tools(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Monorepo scaffolds honor TypeScript tool selections."""
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "init",
+            "demo",
+            "--profile",
+            "monorepo",
+            "--agent",
+            "codex",
+            "--typescript-lint",
+            "off",
+            "--typescript-test",
+            "off",
+        ],
+    )
+
+    assert result.exit_code == SUCCESS, result.output
+    project_dir = tmp_path / "demo"
+    files = _relative_files(project_dir)
+    package_json = json.loads((project_dir / "package.json").read_text(encoding="utf-8"))
+    ci_workflow = (project_dir / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+    readme = (project_dir / "README.md").read_text(encoding="utf-8")
+    agents = (project_dir / "AGENTS.md").read_text(encoding="utf-8")
+    config = tomllib.loads((project_dir / "scaffold-guard.toml").read_text(encoding="utf-8"))
+
+    assert Path("biome.json") not in files
+    assert Path("packages/typescript/vitest.config.ts") not in files
+    assert Path("packages/typescript/tests/index.test.ts") not in files
+    assert set(package_json["scripts"]) == {"ts:typecheck", "ts:build"}
+    assert set(package_json["devDependencies"]) == {"typescript"}
+    assert config["tools"]["biome"] is False
+    assert config["tools"]["vitest"] is False
+    assert "npm run ts:format:check" not in ci_workflow
+    assert "npm run ts:test" not in ci_workflow
+    assert "npm run ts:coverage" not in ci_workflow
+    assert "npm run ts:typecheck" in ci_workflow
+    assert "npm run ts:build" in ci_workflow
+    assert "npm run ts:format:check" not in readme
+    assert "npm run ts:test" not in agents
+
+
+def test_init_python_can_disable_quality_tools(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Python scaffolds can opt out of Ruff, mypy, and Pyright."""
     monkeypatch.chdir(tmp_path)
 
     result = CliRunner().invoke(
         app,
         ["init", "demo", "--guided"],
-        input="\ncodex\npackage\nMIT\n3.13\n95\nno\nno\nno\ngithub\n",
+        input="\ncodex\npython\nMIT\n3.13\noff\noff\n95\ngithub\n",
     )
 
     assert result.exit_code == SUCCESS, result.output
@@ -165,6 +416,7 @@ def test_init_package_can_disable_quality_tools(
     assert "[tool.mypy]" not in pyproject
     assert tomllib.loads(pyproject)["dependency-groups"]
     assert tomllib.loads(config)["tools"] == {"ruff": False, "mypy": False, "pyright": False}
+    assert tomllib.loads(config)["project"]["profile"] == "python"
     assert "ruff" not in ci_workflow
     assert "mypy" not in ci_workflow
     assert "pyright" not in ci_workflow.lower()
@@ -212,7 +464,7 @@ def test_check_text_output_reports_failure_locations(
     monkeypatch.chdir(tmp_path)
     init_result = CliRunner().invoke(
         app,
-        ["init", "demo", "--profile", "package", "--agent", "codex"],
+        ["init", "demo", "--profile", "python", "--agent", "codex"],
     )
     assert init_result.exit_code == SUCCESS, init_result.output
     core_path = tmp_path / "demo/src/demo/core.py"
@@ -275,18 +527,17 @@ def test_init_all_generates_all_adapter_files(
     assert Path("pyproject.toml") not in files
     assert Path("src/demo/core.py") not in files
     assert Path("CLAUDE.md") in files
-    assert Path(".claude/rules/python.md") in files
-    assert Path(".cursor/rules/python.mdc") in files
+    assert Path(".claude/rules/testing.md") in files
+    assert Path(".cursor/rules/testing.mdc") in files
+    assert Path(".claude/rules/python.md") not in files
+    assert Path(".cursor/rules/python.mdc") not in files
     assert "@AGENTS.md" in (project_dir / "CLAUDE.md").read_text(encoding="utf-8")
     agents = (project_dir / "AGENTS.md").read_text(encoding="utf-8")
-    claude_python = (project_dir / ".claude/rules/python.md").read_text(encoding="utf-8")
-    cursor_python = (project_dir / ".cursor/rules/python.mdc").read_text(encoding="utf-8")
-    cursor_hygiene = (project_dir / ".cursor/rules/git-hygiene.mdc").read_text(encoding="utf-8")
-    assert "alwaysApply: false" in cursor_python
+    cursor_testing = (project_dir / ".cursor/rules/testing.mdc").read_text(encoding="utf-8")
+    assert "alwaysApply: false" in cursor_testing
     assert "Use subagents for bounded, read-only work" in agents
-    assert "dataclass(frozen=True, slots=True)" in claude_python
-    assert "TypedDict" in cursor_python
-    assert "main thread focused" in cursor_hygiene
+    assert "Use dataclasses for internal structured state" in agents
+    assert "TypedDict" in agents
     assert "Claude Code: CLAUDE.md + .claude/rules/" in result.output
     assert "Cursor: .cursor/rules/*.mdc + AGENTS.md" in result.output
 
@@ -301,7 +552,7 @@ def test_init_without_name_runs_guided_setup(
     result = CliRunner().invoke(
         app,
         ["init"],
-        input="guided-demo\nclaude\npackage\nApache-2.0\n3.14\n90\nyes\nyes\nyes\ngithub\n",
+        input="guided-demo\nclaude\npython\nApache-2.0\n3.14\nstrict\nmypy+pyright\n90\ngithub\n",
     )
 
     assert result.exit_code == SUCCESS, result.output
@@ -313,10 +564,44 @@ def test_init_without_name_runs_guided_setup(
     assert 'requires-python = ">=3.14"' in pyproject
     assert "fail_under = 90" in pyproject
     assert 'license = "Apache-2.0"' in pyproject
+    assert 'profile = "python"' in config
     assert 'python_min = "3.14"' in config
     assert "coverage_fail_under = 90" in config
     assert "ScaffoldGuard guided setup" in result.output
-    assert "Created ScaffoldGuard package project: guided-demo" in result.output
+    assert "minimal: guardrails only; no Python or TypeScript source scaffold" in result.output
+    assert "Project profile (minimal/python/typescript/monorepo)" in result.output
+    assert "python: Python package scaffold with src/, tests/, docs/, and uv" in result.output
+    assert "package: Python package scaffold" not in result.output
+    assert "typescript: TypeScript package scaffold with npm and configurable tooling" in (
+        result.output
+    )
+    assert "monorepo: Python + TypeScript workspaces under packages/" in result.output
+    assert "Created ScaffoldGuard python project: guided-demo" in result.output
+
+
+def test_init_guided_monorepo_prompts_for_language_tool_setup(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Guided monorepo setup asks for Python and TypeScript tool choices."""
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(
+        app,
+        ["init"],
+        input=(
+            "guided-monorepo\ncodex\nmonorepo\nMIT\n3.13\nstrict\nmypy+pyright\n"
+            "strict\nbiome\nvitest\n95\ngithub\n"
+        ),
+    )
+
+    assert result.exit_code == SUCCESS, result.output
+    assert (tmp_path / "guided-monorepo/packages/typescript/src/index.ts").exists()
+    assert "Ruff setup (strict/off)" in result.output
+    assert "Python type checking (mypy+pyright/mypy/pyright/off)" in result.output
+    assert "TypeScript mode (strict/standard)" in result.output
+    assert "TypeScript formatter/linter (biome/off)" in result.output
+    assert "TypeScript test runner (vitest/off)" in result.output
 
 
 def test_init_guided_recovers_from_invalid_prompt_answers(
@@ -330,8 +615,8 @@ def test_init_guided_recovers_from_invalid_prompt_answers(
         app,
         ["init"],
         input=(
-            "demo\nbad-agent\ncodex\npackage\nMIT\n3.13\n"
-            "not-a-number\n101\n95\nmaybe\nyes\nyes\nyes\ngithub\n"
+            "demo\nbad-agent\ncodex\npackage\npython\nMIT\n3.13\n"
+            "maybe\nstrict\nbad-type\nmypy+pyright\nnot-a-number\n101\n95\ngithub\n"
         ),
     )
 
@@ -339,9 +624,32 @@ def test_init_guided_recovers_from_invalid_prompt_answers(
     assert (tmp_path / "demo/AGENTS.md").exists()
     assert not (tmp_path / "demo/CLAUDE.md").exists()
     assert "Choose one of: codex, claude, cursor, all" in result.output
-    assert "Choose one of: yes, no" in result.output
+    assert "Choose one of: minimal, python, typescript, monorepo" in result.output
+    assert "Choose one of: strict, off" in result.output
+    assert "Choose one of: mypy+pyright, mypy, pyright, off" in result.output
     assert "Test coverage floor must be an integer." in result.output
     assert "Test coverage floor must be between 1 and 100." in result.output
+
+
+def test_init_help_explains_profile_choices() -> None:
+    """The init help text makes profile names understandable."""
+    result = CliRunner().invoke(app, ["init", "--help"])
+
+    assert result.exit_code == SUCCESS, result.output
+    assert "minimal" in result.output
+    assert "guardrails only" in result.output
+    assert "source scaffold" in result.output
+    assert "python" in result.output
+    assert "Python package scaffold" in result.output
+    assert "package Python package scaffold" not in result.output
+    assert "typescript TypeScript" in result.output
+    assert "monorepo" in result.output
+    assert "TypeScript workspaces" in result.output
+    assert "Generated Python Ruff" in result.output
+    assert "type-checking setup" in result.output
+    assert "Generated TypeScript" in result.output
+    assert "formatter/linter setup" in result.output
+    assert "runner setup" in result.output
 
 
 def test_init_dot_with_explicit_options_generates_project_in_current_directory(
@@ -376,7 +684,7 @@ def test_init_dot_without_explicit_options_runs_guided_setup(
     project_dir.mkdir()
     monkeypatch.chdir(project_dir)
 
-    result = CliRunner().invoke(app, ["init", "."], input="\ncodex\n\n\n\n\n\n")
+    result = CliRunner().invoke(app, ["init", "."], input="\ncodex\n\n\n\n")
 
     assert result.exit_code == SUCCESS, result.output
     assert (project_dir / "AGENTS.md").exists()
@@ -396,7 +704,7 @@ def test_init_guided_accepts_empty_name_for_current_directory(
     project_dir.mkdir()
     monkeypatch.chdir(project_dir)
 
-    result = CliRunner().invoke(app, ["init"], input="\ncodex\n\n\n\n\n\n")
+    result = CliRunner().invoke(app, ["init"], input="\ncodex\n\n\n\n")
 
     assert result.exit_code == SUCCESS, result.output
     assert (project_dir / "AGENTS.md").exists()
@@ -415,7 +723,7 @@ def test_init_guided_accepts_dot_for_current_directory(
     project_dir.mkdir()
     monkeypatch.chdir(project_dir)
 
-    result = CliRunner().invoke(app, ["init"], input=".\ncodex\n\n\n\n\n\n")
+    result = CliRunner().invoke(app, ["init"], input=".\ncodex\n\n\n\n")
 
     assert result.exit_code == SUCCESS, result.output
     assert (project_dir / "AGENTS.md").exists()
@@ -504,11 +812,7 @@ def _assert_no_unresolved_project_placeholders(project_dir: Path) -> None:
 
 def _assert_python_files_compile(project_dir: Path) -> None:
     """Compile generated Python files without importing test modules."""
-    for path in (project_dir / "src").rglob("*.py"):
-        py_compile.compile(str(path), doraise=True)
-    for path in (project_dir / "tests").rglob("*.py"):
-        py_compile.compile(str(path), doraise=True)
-    for path in (project_dir / "examples").rglob("*.py"):
+    for path in project_dir.rglob("*.py"):
         py_compile.compile(str(path), doraise=True)
 
 

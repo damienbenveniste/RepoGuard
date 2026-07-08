@@ -16,14 +16,19 @@ configuration change in this repository.
 - Preserve the V1 promise: generate a repository with clear agent instructions,
   strict local tooling, GitHub Actions or GitLab CI, and policy checks that
   catch common agent mistakes. The default `minimal` profile should add
-  guardrails only; `package` should be explicit when users want Python package
-  folders and tooling.
+  guardrails only; `python` should be explicit when users want Python package
+  folders and tooling; `typescript` and `monorepo` should be explicit when
+  users want TypeScript or mixed Python+TypeScript starter layouts.
 - Keep `scaffold-guard init` friendly for first-time users: omitting `NAME`
   starts guided setup, and leaving the project-name prompt blank initializes
   the current empty directory. Passing `NAME` and flags remains the stable
   automation path. Keep `.` as a compatibility alias for current-directory
   automation, but do not present it as the primary guided user flow. Do not add
   guided-only generation behavior without matching non-interactive flags.
+- Guided setup should present meaningful setup choices, not one yes/no prompt
+  per mature tool when a preset or scoped selector is clearer. Keep Python and
+  TypeScript tool prompts profile-aware, and keep generated files, config, CI,
+  validation, docs, and agent instructions synchronized with those choices.
 - Treat `scaffold_guard_v1_implementation_plan.md` as the source of current
   product scope and acceptance criteria until the plan is moved into formal docs.
 - Keep V1 focused on a developer CLI. Do not add a SaaS dashboard, telemetry,
@@ -75,27 +80,46 @@ configuration change in this repository.
 
 ## Delegation, Subagents, and MCP
 
-- Keep the main thread focused on decisions, edits, validation, and final
-  synthesis. Use subagents to keep bulky exploration, broad searches, and
-  independent investigation out of the main thread when delegation will reduce
-  noise.
-- Use subagents for bounded, read-only work: codebase reconnaissance,
-  test-failure triage, generated-output inspection, documentation review,
-  compatibility research, and issue/PR or CI summarization.
-- Give subagents explicit scope, paths or commands to inspect, constraints, and
-  the expected evidence format. Do not delegate final judgment, destructive
-  actions, secret handling, broad edits, release actions, or completion claims.
-- Treat subagent findings as evidence to verify against repository files,
-  tests, or primary sources. The primary agent owns synthesis, edits,
-  validation, and final responses.
-- Use MCP servers when available for current external context: GitHub or GitLab
-  for issues, PRs, releases, and CI; documentation/context servers for current
-  library APIs; browser tools for rendered UI checks; package-index tools for
-  published metadata; and read-only database or observability servers for
-  diagnostics.
-- Keep MCP usage read-only unless the user explicitly asks for mutation. If an
-  MCP server is unavailable, continue with repo-local evidence and state the
-  limitation when it affects confidence.
+- For every non-trivial implementation task, delegate implementation to at
+  least one worker subagent before substantial local edits whenever subagent
+  tooling is available. Use multiple subagents in parallel when the work has
+  separable concerns such as code mapping, template changes, docs, tests, or
+  independent review.
+- Keep the main thread as coordinator and available for user coordination and
+  new requests. The main thread owns scope, instruction interpretation,
+  integration decisions, final validation, and user communication; worker
+  subagents own assigned implementation slices.
+- Do not spawn a worker and then immediately block the main thread on a long
+  wait. After delegation, continue useful non-overlapping coordination work,
+  use short opportunistic checks for worker results, and only wait when the
+  next integration step is truly blocked.
+- Assign every worker subagent concrete ownership: files, modules, templates,
+  docs, tests, or another explicit responsibility. Tell workers they are not
+  alone in the codebase and must not revert unrelated edits.
+- Use read-only briefs for mapping, test-gap discovery, documentation sweeps,
+  and review. For broad implementation work, using only a read-only or audit
+  subagent is not sufficient unless the implementation is tiny or cannot be
+  cleanly delegated. Use worker briefs for disjoint implementation slices when
+  edits can be separated cleanly.
+- Give each subagent a narrow brief with expected output: concrete file paths,
+  risks, changed files if any, and recommended tests. Do not ask for broad
+  summaries.
+- If subagents are not used for an implementation task, the final response must
+  say why before implementation proceeds locally. Acceptable reasons are
+  limited to unavailable subagent tooling, a tiny single-file edit, or a task
+  that is purely a direct user question with no repo change.
+- Do not delegate interpretation of repository instructions, selected skills,
+  security-sensitive changes, release decisions, or final completion claims.
+  The main agent owns those.
+- When the task involves current library, framework, SDK, CLI, or cloud-service
+  behavior, use the available docs MCP first. Prefer Context7 for package and
+  framework docs, the GitHub app for repository/PR/CI state, and browser tools
+  for rendered documentation or Pages verification when available. Keep MCP
+  usage read-only unless the user explicitly asks for mutation. If an MCP server
+  is unavailable, continue with repo-local evidence and state the limitation
+  when it affects confidence.
+- Close out subagent findings explicitly: either incorporate them in the change
+  or state why they were not needed.
 
 ## Python Tooling
 
@@ -123,6 +147,20 @@ configuration change in this repository.
   when behavior, invariants, side effects, filesystem/network access, or error
   handling are not obvious from the name and types. Avoid boilerplate docstrings
   that merely restate the signature.
+
+## TypeScript Tooling
+
+- Generated TypeScript projects should use npm scripts and TypeScript compiler
+  checks. Strict compiler mode, Biome formatting/linting, and Vitest
+  tests/coverage are configurable generation choices; honor the selected tool
+  set everywhere instead of assuming they are always enabled.
+- Generated TypeScript-only projects should not include Python package tooling
+  or Python-specific adapter rules.
+- Generated monorepos should keep Python code under `packages/python/` and
+  TypeScript code under `packages/typescript/`, with validation scoped to the
+  relevant workspace when possible.
+- Do not introduce `any`, `as any`, `// @ts-ignore`, `// @ts-expect-error`, or
+  broad lint suppressions in generated TypeScript examples or templates.
 
 ## Types and Data Modeling
 
@@ -175,9 +213,9 @@ configuration change in this repository.
 - Unit tests should cover CLI argument handling, rendering, scaffold planning,
   filesystem safety, adapter selection, unsafe-pattern checks, diff
   requirements, generated-file checks, and config consistency.
-- Integration tests should cover generated minimal and package profiles, adapter
-  file sets, `compile-rules` idempotence, `validate --quick`, JSON modes, and
-  import smoke behavior.
+- Integration tests should cover generated minimal, python, TypeScript, and
+  monorepo profiles, adapter file sets, `compile-rules` idempotence,
+  `validate --quick`, JSON modes, and import smoke behavior where applicable.
 - Tests must verify behavior and regressions, not duplicate implementation
   details or mocked call order.
 - Name test files after the behavior or module under test. Do not use milestone,
@@ -244,9 +282,9 @@ uv run mkdocs build --strict
 Generated projects should be validated with their configured commands:
 
 ```bash
-uv run scaffold-guard check
-uv run scaffold-guard inspect-diff
-uv run scaffold-guard validate
+scaffold-guard check
+scaffold-guard inspect-diff
+scaffold-guard validate
 ```
 
 Do not report completion if a required check fails. Fix the failure or clearly

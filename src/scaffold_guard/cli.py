@@ -2,6 +2,7 @@
 
 import json
 from contextvars import ContextVar
+from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 from typing import Annotated, NoReturn
@@ -38,7 +39,9 @@ class ProfileOption(StrEnum):
     """Supported generated-project profiles."""
 
     MINIMAL = "minimal"
-    PACKAGE = "package"
+    PYTHON = "python"
+    TYPESCRIPT = "typescript"
+    MONOREPO = "monorepo"
 
 
 class LicenseOption(StrEnum):
@@ -56,9 +59,90 @@ class CiOption(StrEnum):
     GITLAB = "gitlab"
 
 
+class RuffSetupOption(StrEnum):
+    """Supported generated Python Ruff setup choices."""
+
+    STRICT = "strict"
+    OFF = "off"
+
+
+class PythonTypecheckOption(StrEnum):
+    """Supported generated Python type-checking choices."""
+
+    MYPY_PYRIGHT = "mypy+pyright"
+    MYPY = "mypy"
+    PYRIGHT = "pyright"
+    OFF = "off"
+
+
+class TypeScriptModeOption(StrEnum):
+    """Supported generated TypeScript compiler strictness choices."""
+
+    STRICT = "strict"
+    STANDARD = "standard"
+
+
+class TypeScriptLintOption(StrEnum):
+    """Supported generated TypeScript formatting and linting choices."""
+
+    BIOME = "biome"
+    OFF = "off"
+
+
+class TypeScriptTestOption(StrEnum):
+    """Supported generated TypeScript test runner choices."""
+
+    VITEST = "vitest"
+    OFF = "off"
+
+
+@dataclass(frozen=True, slots=True)
+class PromptedInitOptions:
+    """Options collected from guided init prompts."""
+
+    name: str
+    agent: AgentOption
+    profile: ProfileOption
+    license_name: LicenseOption
+    python_min: str
+    coverage: int
+    ci: CiOption
+    ruff: bool
+    mypy: bool
+    pyright: bool
+    typescript_strict: bool
+    biome: bool
+    vitest: bool
+
+
+@dataclass(frozen=True, slots=True)
+class InitPromptDefaults:
+    """Default values used by guided init prompts."""
+
+    name: str | None
+    agent: AgentOption
+    profile: ProfileOption
+    license_name: LicenseOption
+    python_min: str
+    coverage: int
+    ci: CiOption
+    ruff_setup: RuffSetupOption
+    python_typecheck: PythonTypecheckOption
+    typescript_mode: TypeScriptModeOption
+    typescript_lint: TypeScriptLintOption
+    typescript_test: TypeScriptTestOption
+
+
 CHOICE_SEPARATOR = "/"
 COVERAGE_MIN = 1
 COVERAGE_MAX = 100
+PROFILE_DESCRIPTIONS = (
+    ("minimal", "guardrails only; no Python or TypeScript source scaffold"),
+    ("python", "Python package scaffold with src/, tests/, docs/, and uv"),
+    ("typescript", "TypeScript package scaffold with npm and configurable tooling"),
+    ("monorepo", "Python + TypeScript workspaces under packages/"),
+)
+PROFILE_CHOICES = tuple(option.value for option in ProfileOption)
 INIT_OPTION_PARAMETER_NAMES = (
     "agent",
     "profile",
@@ -66,6 +150,11 @@ INIT_OPTION_PARAMETER_NAMES = (
     "python_min",
     "coverage",
     "ci",
+    "ruff_setup",
+    "python_typecheck",
+    "typescript_mode",
+    "typescript_lint",
+    "typescript_test",
     "dry_run",
     "force",
 )
@@ -96,6 +185,9 @@ def _print_init_summary(
     ruff: bool,
     mypy: bool,
     pyright: bool,
+    typescript_strict: bool,
+    biome: bool,
+    vitest: bool,
 ) -> None:
     """Print the user-facing summary after init planning or creation."""
     action = "Planned" if summary.dry_run else "Created"
@@ -111,12 +203,18 @@ def _print_init_summary(
         typer.echo("  - Claude Code: CLAUDE.md + .claude/rules/")
     if agent in {AgentOption.CURSOR, AgentOption.ALL}:
         typer.echo("  - Cursor: .cursor/rules/*.mdc + AGENTS.md")
-    if profile == ProfileOption.PACKAGE:
+    if profile in {ProfileOption.PYTHON, ProfileOption.MONOREPO}:
         typer.echo()
         typer.echo("Python tooling:")
         typer.echo(f"  - Ruff: {'enabled' if ruff else 'disabled'}")
         typer.echo(f"  - mypy: {'enabled' if mypy else 'disabled'}")
         typer.echo(f"  - Pyright: {'enabled' if pyright else 'disabled'}")
+    if profile in {ProfileOption.TYPESCRIPT, ProfileOption.MONOREPO}:
+        typer.echo()
+        typer.echo("TypeScript tooling:")
+        typer.echo(f"  - TypeScript compiler: {'strict' if typescript_strict else 'standard'}")
+        typer.echo(f"  - Biome: {'enabled' if biome else 'disabled'}")
+        typer.echo(f"  - Vitest: {'enabled' if vitest else 'disabled'}")
     typer.echo()
     typer.echo("CI:")
     typer.echo(f"  - {ci.value}")
@@ -124,8 +222,10 @@ def _print_init_summary(
     typer.echo("Next:")
     if summary.target_dir.resolve(strict=False) != Path.cwd().resolve(strict=False):
         typer.echo(f"  cd {summary.target_dir.name}")
-    if profile == ProfileOption.PACKAGE:
+    if profile in {ProfileOption.PYTHON, ProfileOption.MONOREPO}:
         typer.echo("  uv sync --all-groups")
+    if profile in {ProfileOption.TYPESCRIPT, ProfileOption.MONOREPO}:
+        typer.echo("  npm install")
     typer.echo("  scaffold-guard check")
     typer.echo("  scaffold-guard validate")
 
@@ -168,6 +268,19 @@ def _prompt_choice(label: str, *, choices: tuple[str, ...], default: str) -> str
         typer.echo(f"Choose one of: {', '.join(choices)}", err=True)
 
 
+def _profile_callback(value: str | None) -> str:
+    """Validate and normalize `--profile`, preserving the legacy package alias."""
+    if value is None:
+        return ProfileOption.MINIMAL.value
+    normalized = value.strip().lower()
+    if normalized == "package":
+        return ProfileOption.PYTHON.value
+    if normalized in PROFILE_CHOICES:
+        return normalized
+    choices = ", ".join(PROFILE_CHOICES)
+    raise typer.BadParameter(f"choose one of: {choices}")
+
+
 def _prompt_text(label: str, *, default: str) -> str:
     """Prompt for a non-empty text value."""
     while True:
@@ -194,80 +307,143 @@ def _prompt_coverage(default: int) -> int:
         )
 
 
-def _prompt_enabled(label: str, *, default: bool) -> bool:
-    """Prompt for an enabled/disabled feature selection."""
-    answer = _prompt_choice(
-        label,
-        choices=("yes", "no"),
-        default="yes" if default else "no",
+def _ruff_enabled(option: RuffSetupOption) -> bool:
+    """Return whether generated Python projects should include Ruff."""
+    return option == RuffSetupOption.STRICT
+
+
+def _python_typecheck_enabled(option: PythonTypecheckOption) -> tuple[bool, bool]:
+    """Return mypy and Pyright enablement for a Python type-checking choice."""
+    return (
+        option in {PythonTypecheckOption.MYPY_PYRIGHT, PythonTypecheckOption.MYPY},
+        option in {PythonTypecheckOption.MYPY_PYRIGHT, PythonTypecheckOption.PYRIGHT},
     )
-    return answer == "yes"
 
 
-def _prompt_init_options(
-    *,
-    name: str | None,
-    agent: AgentOption,
-    profile: ProfileOption,
-    license_name: LicenseOption,
-    python_min: str,
-    coverage: int,
-    ci: CiOption,
-) -> tuple[str, AgentOption, ProfileOption, LicenseOption, str, int, CiOption, bool, bool, bool]:
+def _typescript_strict_enabled(option: TypeScriptModeOption) -> bool:
+    """Return whether generated TypeScript should use strict compiler options."""
+    return option == TypeScriptModeOption.STRICT
+
+
+def _biome_enabled(option: TypeScriptLintOption) -> bool:
+    """Return whether generated TypeScript projects should include Biome."""
+    return option == TypeScriptLintOption.BIOME
+
+
+def _vitest_enabled(option: TypeScriptTestOption) -> bool:
+    """Return whether generated TypeScript projects should include Vitest."""
+    return option == TypeScriptTestOption.VITEST
+
+
+def _print_profile_descriptions() -> None:
+    """Print short descriptions for guided profile choices."""
+    typer.echo("Project profiles:")
+    for profile_name, description in PROFILE_DESCRIPTIONS:
+        typer.echo(f"  - {profile_name}: {description}")
+    typer.echo()
+
+
+def _prompt_init_options(defaults: InitPromptDefaults) -> PromptedInitOptions:
     """Prompt for init options while preserving current flag defaults."""
     typer.echo("ScaffoldGuard guided setup")
     typer.echo()
-    prompted_name = _prompt_init_name(name)
+    prompted_name = _prompt_init_name(defaults.name)
     prompted_agent = AgentOption(
         _prompt_choice(
             "Agent adapters",
             choices=tuple(option.value for option in AgentOption),
-            default=agent.value,
+            default=defaults.agent.value,
         )
     )
+    _print_profile_descriptions()
     prompted_profile = ProfileOption(
         _prompt_choice(
             "Project profile",
-            choices=tuple(option.value for option in ProfileOption),
-            default=profile.value,
+            choices=PROFILE_CHOICES,
+            default=defaults.profile.value,
         )
     )
     prompted_license = LicenseOption(
         _prompt_choice(
             "License",
             choices=tuple(option.value for option in LicenseOption),
-            default=license_name.value,
+            default=defaults.license_name.value,
         )
     )
-    prompted_python_min = python_min
-    prompted_coverage = coverage
-    prompted_ruff = True
-    prompted_mypy = True
-    prompted_pyright = True
-    if prompted_profile == ProfileOption.PACKAGE:
-        prompted_python_min = _prompt_text("Minimum Python version", default=python_min)
-        prompted_coverage = _prompt_coverage(coverage)
-        prompted_ruff = _prompt_enabled("Use Ruff for formatting and linting", default=True)
-        prompted_mypy = _prompt_enabled("Use mypy for type checking", default=True)
-        prompted_pyright = _prompt_enabled("Use Pyright for type checking", default=True)
+    prompted_python_min = defaults.python_min
+    prompted_coverage = defaults.coverage
+    prompted_ruff = False
+    prompted_mypy = False
+    prompted_pyright = False
+    prompted_typescript_strict = True
+    prompted_biome = False
+    prompted_vitest = False
+    if prompted_profile in {ProfileOption.PYTHON, ProfileOption.MONOREPO}:
+        prompted_python_min = _prompt_text("Minimum Python version", default=defaults.python_min)
+        prompted_ruff_setup = RuffSetupOption(
+            _prompt_choice(
+                "Ruff setup",
+                choices=tuple(option.value for option in RuffSetupOption),
+                default=defaults.ruff_setup.value,
+            )
+        )
+        prompted_python_typecheck = PythonTypecheckOption(
+            _prompt_choice(
+                "Python type checking",
+                choices=tuple(option.value for option in PythonTypecheckOption),
+                default=defaults.python_typecheck.value,
+            )
+        )
+        prompted_ruff = _ruff_enabled(prompted_ruff_setup)
+        prompted_mypy, prompted_pyright = _python_typecheck_enabled(prompted_python_typecheck)
+    if prompted_profile in {ProfileOption.TYPESCRIPT, ProfileOption.MONOREPO}:
+        prompted_typescript_mode = TypeScriptModeOption(
+            _prompt_choice(
+                "TypeScript mode",
+                choices=tuple(option.value for option in TypeScriptModeOption),
+                default=defaults.typescript_mode.value,
+            )
+        )
+        prompted_typescript_lint = TypeScriptLintOption(
+            _prompt_choice(
+                "TypeScript formatter/linter",
+                choices=tuple(option.value for option in TypeScriptLintOption),
+                default=defaults.typescript_lint.value,
+            )
+        )
+        prompted_typescript_test = TypeScriptTestOption(
+            _prompt_choice(
+                "TypeScript test runner",
+                choices=tuple(option.value for option in TypeScriptTestOption),
+                default=defaults.typescript_test.value,
+            )
+        )
+        prompted_typescript_strict = _typescript_strict_enabled(prompted_typescript_mode)
+        prompted_biome = _biome_enabled(prompted_typescript_lint)
+        prompted_vitest = _vitest_enabled(prompted_typescript_test)
+    if prompted_profile in {ProfileOption.PYTHON, ProfileOption.MONOREPO} or prompted_vitest:
+        prompted_coverage = _prompt_coverage(defaults.coverage)
     prompted_ci = CiOption(
         _prompt_choice(
             "CI provider",
             choices=tuple(option.value for option in CiOption),
-            default=ci.value,
+            default=defaults.ci.value,
         )
     )
-    return (
-        prompted_name,
-        prompted_agent,
-        prompted_profile,
-        prompted_license,
-        prompted_python_min,
-        prompted_coverage,
-        prompted_ci,
-        prompted_ruff,
-        prompted_mypy,
-        prompted_pyright,
+    return PromptedInitOptions(
+        name=prompted_name,
+        agent=prompted_agent,
+        profile=prompted_profile,
+        license_name=prompted_license,
+        python_min=prompted_python_min,
+        coverage=prompted_coverage,
+        ci=prompted_ci,
+        ruff=prompted_ruff,
+        mypy=prompted_mypy,
+        pyright=prompted_pyright,
+        typescript_strict=prompted_typescript_strict,
+        biome=prompted_biome,
+        vitest=prompted_vitest,
     )
 
 
@@ -376,7 +552,7 @@ def version_command() -> None:
 
 
 @app.command("init")
-def init_command(
+def init_command(  # noqa: PLR0913 - Typer exposes one parameter per public CLI option.
     name: Annotated[
         str | None,
         typer.Argument(
@@ -389,9 +565,19 @@ def init_command(
         typer.Option("--agent", help="Agent adapter files to generate."),
     ] = AgentOption.ALL,
     profile: Annotated[
-        ProfileOption,
-        typer.Option("--profile", help="Generated project profile."),
-    ] = ProfileOption.MINIMAL,
+        str,
+        typer.Option(
+            "--profile",
+            callback=_profile_callback,
+            help=(
+                "Generated project profile: minimal guardrails only, no source scaffold; "
+                "python Python package scaffold; typescript TypeScript package scaffold; "
+                "monorepo Python + TypeScript workspaces. Tool setup is configured with "
+                "--ruff, --python-typecheck, --typescript-mode, --typescript-lint, and "
+                "--typescript-test."
+            ),
+        ),
+    ] = ProfileOption.MINIMAL.value,
     license_name: Annotated[
         LicenseOption,
         typer.Option("--license", help="Generated project license."),
@@ -408,6 +594,26 @@ def init_command(
         typer.Option("--coverage", min=1, max=100, help="Generated project test coverage floor."),
     ] = 95,
     ci: Annotated[CiOption, typer.Option("--ci", help="Generated CI provider.")] = CiOption.GITHUB,
+    ruff_setup: Annotated[
+        RuffSetupOption,
+        typer.Option("--ruff", help="Generated Python Ruff setup."),
+    ] = RuffSetupOption.STRICT,
+    python_typecheck: Annotated[
+        PythonTypecheckOption,
+        typer.Option("--python-typecheck", help="Generated Python type-checking setup."),
+    ] = PythonTypecheckOption.MYPY_PYRIGHT,
+    typescript_mode: Annotated[
+        TypeScriptModeOption,
+        typer.Option("--typescript-mode", help="Generated TypeScript compiler mode."),
+    ] = TypeScriptModeOption.STRICT,
+    typescript_lint: Annotated[
+        TypeScriptLintOption,
+        typer.Option("--typescript-lint", help="Generated TypeScript formatter/linter setup."),
+    ] = TypeScriptLintOption.BIOME,
+    typescript_test: Annotated[
+        TypeScriptTestOption,
+        typer.Option("--typescript-test", help="Generated TypeScript test runner setup."),
+    ] = TypeScriptTestOption.VITEST,
     guided: Annotated[
         bool,
         typer.Option("--guided", help="Prompt for init options even when NAME is provided."),
@@ -416,30 +622,49 @@ def init_command(
     force: Annotated[bool, typer.Option("--force", help="Overwrite generated files.")] = False,
 ) -> None:
     """Create a new ScaffoldGuard project."""
-    ruff = True
-    mypy = True
-    pyright = True
+    profile_option = ProfileOption(profile)
+    ruff = _ruff_enabled(ruff_setup)
+    mypy, pyright = _python_typecheck_enabled(python_typecheck)
+    typescript_strict = _typescript_strict_enabled(typescript_mode)
+    biome = _biome_enabled(typescript_lint)
+    vitest = _vitest_enabled(typescript_test)
     if _should_prompt_init(name=name, guided=guided):
-        (
-            name,
-            agent,
-            profile,
-            license_name,
-            python_min,
-            coverage,
-            ci,
-            ruff,
-            mypy,
-            pyright,
-        ) = _prompt_init_options(
-            name=name,
-            agent=agent,
-            profile=profile,
-            license_name=license_name,
-            python_min=python_min,
-            coverage=coverage,
-            ci=ci,
+        prompted_options = _prompt_init_options(
+            InitPromptDefaults(
+                name=name,
+                agent=agent,
+                profile=profile_option,
+                license_name=license_name,
+                python_min=python_min,
+                coverage=coverage,
+                ci=ci,
+                ruff_setup=ruff_setup,
+                python_typecheck=python_typecheck,
+                typescript_mode=typescript_mode,
+                typescript_lint=typescript_lint,
+                typescript_test=typescript_test,
+            )
         )
+        name = prompted_options.name
+        agent = prompted_options.agent
+        profile_option = prompted_options.profile
+        license_name = prompted_options.license_name
+        python_min = prompted_options.python_min
+        coverage = prompted_options.coverage
+        ci = prompted_options.ci
+        ruff = prompted_options.ruff
+        mypy = prompted_options.mypy
+        pyright = prompted_options.pyright
+        typescript_strict = prompted_options.typescript_strict
+        biome = prompted_options.biome
+        vitest = prompted_options.vitest
+    if profile_option not in {ProfileOption.PYTHON, ProfileOption.MONOREPO}:
+        ruff = False
+        mypy = False
+        pyright = False
+    if profile_option not in {ProfileOption.TYPESCRIPT, ProfileOption.MONOREPO}:
+        biome = False
+        vitest = False
     if name is None:
         _fail("Project name is required.")
     try:
@@ -447,7 +672,7 @@ def init_command(
             name,
             base_dir=Path.cwd(),
             agent=agent.value,
-            profile=profile.value,
+            profile=profile_option.value,
             license_name=license_name.value,
             python_min=python_min,
             coverage=coverage,
@@ -455,18 +680,29 @@ def init_command(
             dry_run=dry_run,
             force=force,
         )
-        options = with_quality_tools(options, ruff=ruff, mypy=mypy, pyright=pyright)
+        options = with_quality_tools(
+            options,
+            ruff=ruff,
+            mypy=mypy,
+            pyright=pyright,
+            typescript_strict=typescript_strict,
+            biome=biome,
+            vitest=vitest,
+        )
         summary = scaffold_package_project(options)
     except (FileExistsError, NotADirectoryError, ValueError) as exc:
         _fail(str(exc))
     _print_init_summary(
         summary,
         agent=agent,
-        profile=profile,
+        profile=profile_option,
         ci=ci,
         ruff=ruff,
         mypy=mypy,
         pyright=pyright,
+        typescript_strict=typescript_strict,
+        biome=biome,
+        vitest=vitest,
     )
 
 

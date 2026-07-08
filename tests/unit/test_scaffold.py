@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from scaffold_guard.models import AgentChoice, CiChoice, InitOptions
+from scaffold_guard.models import AgentChoice, CiChoice, InitOptions, ProfileChoice
 from scaffold_guard.renderer import TemplateRenderer
 from scaffold_guard.scaffold import (
     RenderedFile,
@@ -71,7 +71,7 @@ def test_build_init_options_uses_current_base_directory(tmp_path: Path) -> None:
         "demo-project",
         base_dir=tmp_path,
         agent="all",
-        profile="package",
+        profile="python",
         license_name="MIT",
         python_min="3.13",
         coverage=95,
@@ -83,13 +83,14 @@ def test_build_init_options_uses_current_base_directory(tmp_path: Path) -> None:
     assert options.target_dir == tmp_path / "demo-project"
     assert options.project_slug == "demo-project"
     assert options.package_name == "demo_project"
+    assert options.profile == "python"
     assert options.ruff_enabled
     assert options.mypy_enabled
     assert options.pyright_enabled
 
 
-def test_build_init_options_accepts_disabled_quality_tools(tmp_path: Path) -> None:
-    """CLI tool selections are retained in scaffold options."""
+def test_build_init_options_accepts_legacy_package_profile(tmp_path: Path) -> None:
+    """The old package profile input normalizes to the canonical Python profile."""
     options = build_init_options(
         "demo",
         base_dir=tmp_path,
@@ -102,11 +103,42 @@ def test_build_init_options_accepts_disabled_quality_tools(tmp_path: Path) -> No
         dry_run=False,
         force=False,
     )
-    options = with_quality_tools(options, ruff=False, mypy=False, pyright=False)
+
+    assert options.profile == "python"
+    assert options.docs_enabled
+    assert options.python_enabled
+
+
+def test_build_init_options_accepts_disabled_quality_tools(tmp_path: Path) -> None:
+    """CLI tool selections are retained in scaffold options."""
+    options = build_init_options(
+        "demo",
+        base_dir=tmp_path,
+        agent="all",
+        profile="python",
+        license_name="MIT",
+        python_min="3.13",
+        coverage=95,
+        ci="github",
+        dry_run=False,
+        force=False,
+    )
+    options = with_quality_tools(
+        options,
+        ruff=False,
+        mypy=False,
+        pyright=False,
+        typescript_strict=False,
+        biome=False,
+        vitest=False,
+    )
 
     assert not options.ruff_enabled
     assert not options.mypy_enabled
     assert not options.pyright_enabled
+    assert not options.typescript_strict_enabled
+    assert not options.biome_enabled
+    assert not options.vitest_enabled
 
 
 def test_build_init_options_can_target_current_directory(tmp_path: Path) -> None:
@@ -118,7 +150,7 @@ def test_build_init_options_can_target_current_directory(tmp_path: Path) -> None
         ".",
         base_dir=project_dir,
         agent="all",
-        profile="package",
+        profile="python",
         license_name="MIT",
         python_min="3.13",
         coverage=95,
@@ -146,6 +178,73 @@ def test_package_template_specs_include_selected_adapters(tmp_path: Path) -> Non
     assert "CLAUDE.md" in all_destinations
     assert ".claude/rules/python.md" in all_destinations
     assert ".cursor/rules/python.mdc" in all_destinations
+
+
+def test_typescript_template_specs_filter_python_adapter_rules(tmp_path: Path) -> None:
+    """TypeScript-only scaffolds generate TypeScript adapter rules without Python rules."""
+    options = _init_options(tmp_path, agent="all", profile="typescript")
+
+    destinations = {spec.destination for spec in package_template_specs(options)}
+
+    assert "package.json" in destinations
+    assert "tsconfig.json" in destinations
+    assert ".claude/rules/typescript.md" in destinations
+    assert ".cursor/rules/typescript.mdc" in destinations
+    assert ".claude/rules/python.md" not in destinations
+    assert ".cursor/rules/python.mdc" not in destinations
+    assert "pyproject.toml" not in destinations
+
+
+def test_typescript_template_specs_omit_disabled_optional_tool_files(tmp_path: Path) -> None:
+    """Disabled TypeScript tools remove their generated config and test files."""
+    options = _init_options(
+        tmp_path,
+        agent="codex",
+        profile="typescript",
+        typescript_tools=(False, False),
+    )
+
+    destinations = {spec.destination for spec in package_template_specs(options)}
+
+    assert "biome.json" not in destinations
+    assert "vitest.config.ts" not in destinations
+    assert "tests/index.test.ts" not in destinations
+    assert "tsconfig.json" in destinations
+    assert "package.json" in destinations
+
+
+def test_monorepo_template_specs_include_python_and_typescript_rules(tmp_path: Path) -> None:
+    """Monorepo scaffolds include both Python and TypeScript adapter guidance."""
+    options = _init_options(tmp_path, agent="all", profile="monorepo")
+
+    destinations = {spec.destination for spec in package_template_specs(options)}
+
+    assert "pyproject.toml" in destinations
+    assert "package.json" in destinations
+    assert "packages/python/src/{package_name}/core.py" in destinations
+    assert "packages/typescript/src/index.ts" in destinations
+    assert ".claude/rules/python.md" in destinations
+    assert ".claude/rules/typescript.md" in destinations
+    assert ".cursor/rules/python.mdc" in destinations
+    assert ".cursor/rules/typescript.mdc" in destinations
+
+
+def test_monorepo_template_specs_omit_disabled_typescript_tool_files(tmp_path: Path) -> None:
+    """Disabled monorepo TypeScript tools remove optional config and tests."""
+    options = _init_options(
+        tmp_path,
+        agent="codex",
+        profile="monorepo",
+        typescript_tools=(False, False),
+    )
+
+    destinations = {spec.destination for spec in package_template_specs(options)}
+
+    assert "biome.json" not in destinations
+    assert "packages/typescript/vitest.config.ts" not in destinations
+    assert "packages/typescript/tests/index.test.ts" not in destinations
+    assert "packages/typescript/tsconfig.json" in destinations
+    assert "packages/typescript/package.json" in destinations
 
 
 def test_package_template_specs_omit_pyright_config_when_disabled(tmp_path: Path) -> None:
@@ -347,16 +446,18 @@ def _init_options(
     ci: CiChoice = "github",
     dry_run: bool = False,
     force: bool = False,
+    profile: ProfileChoice = "python",
     ruff: bool = True,
     mypy: bool = True,
     pyright: bool = True,
+    typescript_tools: tuple[bool, bool] = (True, True),
 ) -> InitOptions:
     """Build standard test init options."""
     options = build_init_options(
         "demo",
         base_dir=tmp_path,
         agent=agent,
-        profile="package",
+        profile=profile,
         license_name="MIT",
         python_min="3.13",
         coverage=95,
@@ -364,4 +465,11 @@ def _init_options(
         dry_run=dry_run,
         force=force,
     )
-    return with_quality_tools(options, ruff=ruff, mypy=mypy, pyright=pyright)
+    return with_quality_tools(
+        options,
+        ruff=ruff,
+        mypy=mypy,
+        pyright=pyright,
+        biome=typescript_tools[0],
+        vitest=typescript_tools[1],
+    )

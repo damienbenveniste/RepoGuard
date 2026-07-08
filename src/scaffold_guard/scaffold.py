@@ -9,6 +9,7 @@ from pathlib import Path
 from scaffold_guard.adapters import adapters_for
 from scaffold_guard.fs import ensure_relative_safe_path, is_within_directory, write_text_safely
 from scaffold_guard.models import (
+    CANONICAL_PROFILES,
     AgentChoice,
     CiChoice,
     InitOptions,
@@ -16,11 +17,13 @@ from scaffold_guard.models import (
     ProfileChoice,
     ScaffoldSummary,
     TemplateSpec,
+    normalize_profile_choice,
+    profile_includes_python,
 )
 from scaffold_guard.renderer import TemplateRenderer
 
 PROJECT_NAME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
-SUPPORTED_PROFILES = {"minimal", "package"}
+SUPPORTED_PROFILES = CANONICAL_PROFILES | {"package"}
 SUPPORTED_CI: tuple[CiChoice, ...] = ("github", "gitlab")
 
 PACKAGE_BASE_TEMPLATE_SPECS = (
@@ -57,6 +60,82 @@ MINIMAL_GITHUB_TEMPLATE_SPECS = (
     TemplateSpec("minimal/github/workflows/ci.yml.j2", ".github/workflows/ci.yml"),
 )
 MINIMAL_GITLAB_TEMPLATE_SPECS = (TemplateSpec("minimal/gitlab-ci.yml.j2", ".gitlab-ci.yml"),)
+TYPESCRIPT_BASE_TEMPLATE_SPECS = (
+    TemplateSpec("typescript/AGENTS.md.j2", "AGENTS.md"),
+    TemplateSpec("typescript/README.md.j2", "README.md"),
+    TemplateSpec("package/LICENSE.j2", "LICENSE"),
+    TemplateSpec("typescript/package.json.j2", "package.json"),
+    TemplateSpec("typescript/tsconfig.json.j2", "tsconfig.json"),
+    TemplateSpec("typescript/tsconfig.build.json.j2", "tsconfig.build.json"),
+    TemplateSpec("typescript/biome.json.j2", "biome.json"),
+    TemplateSpec("typescript/vitest.config.ts.j2", "vitest.config.ts"),
+    TemplateSpec("typescript/gitignore.j2", ".gitignore"),
+    TemplateSpec("typescript/scaffold-guard.toml.j2", "scaffold-guard.toml"),
+    TemplateSpec("typescript/src/index.ts.j2", "src/index.ts"),
+    TemplateSpec("typescript/tests/index.test.ts.j2", "tests/index.test.ts"),
+)
+TYPESCRIPT_GITHUB_TEMPLATE_SPECS = (
+    TemplateSpec("typescript/github/workflows/ci.yml.j2", ".github/workflows/ci.yml"),
+)
+TYPESCRIPT_GITLAB_TEMPLATE_SPECS = (TemplateSpec("typescript/gitlab-ci.yml.j2", ".gitlab-ci.yml"),)
+MONOREPO_BASE_TEMPLATE_SPECS = (
+    TemplateSpec("monorepo/AGENTS.md.j2", "AGENTS.md"),
+    TemplateSpec("monorepo/README.md.j2", "README.md"),
+    TemplateSpec("package/LICENSE.j2", "LICENSE"),
+    TemplateSpec("monorepo/pyproject.toml.j2", "pyproject.toml"),
+    TemplateSpec("monorepo/package.json.j2", "package.json"),
+    TemplateSpec("monorepo/biome.json.j2", "biome.json"),
+    TemplateSpec("monorepo/gitignore.j2", ".gitignore"),
+    TemplateSpec("monorepo/scaffold-guard.toml.j2", "scaffold-guard.toml"),
+    TemplateSpec(
+        "monorepo/packages/python/examples/hello.py.j2", "packages/python/examples/hello.py"
+    ),
+    TemplateSpec(
+        "monorepo/packages/python/src/package/__init__.py.j2",
+        "packages/python/src/{package_name}/__init__.py",
+    ),
+    TemplateSpec(
+        "monorepo/packages/python/src/package/core.py.j2",
+        "packages/python/src/{package_name}/core.py",
+    ),
+    TemplateSpec(
+        "monorepo/packages/python/src/package/py.typed.j2",
+        "packages/python/src/{package_name}/py.typed",
+    ),
+    TemplateSpec(
+        "monorepo/packages/python/tests/unit/test_core.py.j2",
+        "packages/python/tests/unit/test_core.py",
+    ),
+    TemplateSpec(
+        "monorepo/packages/python/tests/integration/test_import_package.py.j2",
+        "packages/python/tests/integration/test_import_package.py",
+    ),
+    TemplateSpec(
+        "monorepo/packages/typescript/package.json.j2", "packages/typescript/package.json"
+    ),
+    TemplateSpec(
+        "monorepo/packages/typescript/tsconfig.json.j2", "packages/typescript/tsconfig.json"
+    ),
+    TemplateSpec(
+        "monorepo/packages/typescript/tsconfig.build.json.j2",
+        "packages/typescript/tsconfig.build.json",
+    ),
+    TemplateSpec(
+        "monorepo/packages/typescript/vitest.config.ts.j2",
+        "packages/typescript/vitest.config.ts",
+    ),
+    TemplateSpec(
+        "monorepo/packages/typescript/src/index.ts.j2", "packages/typescript/src/index.ts"
+    ),
+    TemplateSpec(
+        "monorepo/packages/typescript/tests/index.test.ts.j2",
+        "packages/typescript/tests/index.test.ts",
+    ),
+)
+MONOREPO_GITHUB_TEMPLATE_SPECS = (
+    TemplateSpec("monorepo/github/workflows/ci.yml.j2", ".github/workflows/ci.yml"),
+)
+MONOREPO_GITLAB_TEMPLATE_SPECS = (TemplateSpec("monorepo/gitlab-ci.yml.j2", ".gitlab-ci.yml"),)
 
 
 @dataclass(frozen=True, slots=True)
@@ -114,6 +193,7 @@ def build_init_options(
     if profile not in SUPPORTED_PROFILES:
         msg = f"Unsupported project profile: {profile}"
         raise ValueError(msg)
+    canonical_profile = normalize_profile_choice(profile)
     if ci not in SUPPORTED_CI:
         msg = f"Unsupported CI provider: {ci}"
         raise ValueError(msg)
@@ -122,12 +202,12 @@ def build_init_options(
         project_slug=project_slug,
         package_name=package_name,
         agent=agent,
-        profile=profile,
+        profile=canonical_profile,
         license=license_name,
         python_min=python_min,
         coverage=coverage,
         ci=ci,
-        docs_enabled=profile == "package",
+        docs_enabled=canonical_profile == "python",
         dry_run=dry_run,
         force=force,
     )
@@ -139,9 +219,20 @@ def with_quality_tools(
     ruff: bool,
     mypy: bool,
     pyright: bool,
+    typescript_strict: bool = True,
+    biome: bool = True,
+    vitest: bool = True,
 ) -> InitOptions:
     """Return init options with explicit generated quality-tool selections."""
-    return replace(options, ruff_enabled=ruff, mypy_enabled=mypy, pyright_enabled=pyright)
+    return replace(
+        options,
+        ruff_enabled=ruff,
+        mypy_enabled=mypy,
+        pyright_enabled=pyright,
+        typescript_strict_enabled=typescript_strict,
+        biome_enabled=biome,
+        vitest_enabled=vitest,
+    )
 
 
 def build_render_context(options: InitOptions) -> Mapping[str, object]:
@@ -156,12 +247,13 @@ def build_render_context(options: InitOptions) -> Mapping[str, object]:
             *(() if not options.pyright_enabled else ("Pyright",)),
             "pytest",
             "coverage",
-            "MkDocs",
+            *(() if not options.docs_enabled else ("MkDocs",)),
         )
     )
     return {
         "project_slug": options.project_slug,
         "package_name": options.package_name,
+        "typescript_package_name": options.project_slug,
         "profile": options.profile,
         "license": options.license,
         "python_min": options.python_min,
@@ -171,9 +263,19 @@ def build_render_context(options: InitOptions) -> Mapping[str, object]:
         "use_ruff": options.ruff_enabled,
         "use_mypy": options.mypy_enabled,
         "use_pyright": options.pyright_enabled,
+        "use_typescript_strict": options.typescript_strict_enabled,
+        "use_biome": options.biome_enabled,
+        "use_vitest": options.vitest_enabled,
+        "use_python": options.python_enabled,
+        "use_typescript": options.typescript_enabled,
         "ruff_enabled": _toml_bool(options.ruff_enabled),
         "mypy_enabled": _toml_bool(options.mypy_enabled),
         "pyright_enabled": _toml_bool(options.pyright_enabled),
+        "typescript_strict_enabled": _toml_bool(options.typescript_strict_enabled),
+        "biome_enabled": _toml_bool(options.biome_enabled),
+        "vitest_enabled": _toml_bool(options.vitest_enabled),
+        "python_enabled": _toml_bool(options.python_enabled),
+        "typescript_enabled": _toml_bool(options.typescript_enabled),
         "codex_enabled": _toml_bool(options.codex_enabled),
         "claude_enabled": _toml_bool(options.claude_enabled),
         "cursor_enabled": _toml_bool(options.cursor_enabled),
@@ -201,27 +303,100 @@ def render_file(
 
 def package_template_specs(options: InitOptions) -> tuple[TemplateSpec, ...]:
     """Return profile templates plus selected adapter templates."""
-    adapter_specs = tuple(
-        spec for adapter in adapters_for(options.agent) for spec in adapter.template_specs()
-    )
-    profile_specs = _profile_template_specs(options)
-    if options.profile == "package" and options.pyright_enabled:
+    adapter_specs = _adapter_template_specs(options)
+    profile_specs = _filtered_profile_template_specs(options)
+    if (
+        profile_includes_python(options.profile)
+        and options.profile != "monorepo"
+        and options.pyright_enabled
+    ):
         profile_specs = (
             *profile_specs,
             TemplateSpec("package/pyrightconfig.json.j2", "pyrightconfig.json"),
         )
+    if options.profile == "monorepo" and options.pyright_enabled:
+        profile_specs = (
+            *profile_specs,
+            TemplateSpec("monorepo/pyrightconfig.json.j2", "pyrightconfig.json"),
+        )
     return (*profile_specs, *adapter_specs)
+
+
+def _filtered_profile_template_specs(options: InitOptions) -> tuple[TemplateSpec, ...]:
+    """Return profile templates after removing disabled optional tool files."""
+    profile_specs = _profile_template_specs(options)
+    skipped_destinations: set[str] = set()
+    if options.typescript_enabled and not options.biome_enabled:
+        skipped_destinations.add("biome.json")
+    if options.profile == "typescript" and not options.vitest_enabled:
+        skipped_destinations.update({"vitest.config.ts", "tests/index.test.ts"})
+    if options.profile == "monorepo" and not options.vitest_enabled:
+        skipped_destinations.update(
+            {
+                "packages/typescript/vitest.config.ts",
+                "packages/typescript/tests/index.test.ts",
+            }
+        )
+    return tuple(spec for spec in profile_specs if spec.destination not in skipped_destinations)
+
+
+def _adapter_template_specs(options: InitOptions) -> tuple[TemplateSpec, ...]:
+    """Return selected adapter templates filtered for generated languages."""
+    base_specs = tuple(
+        spec for adapter in adapters_for(options.agent) for spec in adapter.template_specs()
+    )
+    filtered_specs = tuple(
+        spec
+        for spec in base_specs
+        if options.python_enabled
+        or spec.destination
+        not in {
+            ".claude/rules/python.md",
+            ".cursor/rules/python.mdc",
+        }
+    )
+    ts_specs: list[TemplateSpec] = []
+    if options.typescript_enabled and options.agent in {"claude", "all"}:
+        ts_specs.append(
+            TemplateSpec("agents/claude/rules/typescript.md.j2", ".claude/rules/typescript.md")
+        )
+    if options.typescript_enabled and options.agent in {"cursor", "all"}:
+        ts_specs.append(
+            TemplateSpec("agents/cursor/rules/typescript.mdc.j2", ".cursor/rules/typescript.mdc")
+        )
+    return (*filtered_specs, *ts_specs)
 
 
 def _profile_template_specs(options: InitOptions) -> tuple[TemplateSpec, ...]:
     """Return base profile templates plus selected CI provider templates."""
-    if options.profile == "minimal":
-        if options.ci == "gitlab":
-            return (*MINIMAL_BASE_TEMPLATE_SPECS, *MINIMAL_GITLAB_TEMPLATE_SPECS)
-        return (*MINIMAL_BASE_TEMPLATE_SPECS, *MINIMAL_GITHUB_TEMPLATE_SPECS)
-    if options.ci == "gitlab":
-        return (*PACKAGE_BASE_TEMPLATE_SPECS, *PACKAGE_GITLAB_TEMPLATE_SPECS)
-    return (*PACKAGE_BASE_TEMPLATE_SPECS, *PACKAGE_GITHUB_TEMPLATE_SPECS)
+    base_specs, github_specs, gitlab_specs = _profile_spec_groups(options.profile)
+    ci_specs = gitlab_specs if options.ci == "gitlab" else github_specs
+    return (*base_specs, *ci_specs)
+
+
+def _profile_spec_groups(
+    profile: ProfileChoice,
+) -> tuple[tuple[TemplateSpec, ...], tuple[TemplateSpec, ...], tuple[TemplateSpec, ...]]:
+    """Return base, GitHub, and GitLab template groups for a profile."""
+    if profile == "minimal":
+        return (
+            MINIMAL_BASE_TEMPLATE_SPECS,
+            MINIMAL_GITHUB_TEMPLATE_SPECS,
+            MINIMAL_GITLAB_TEMPLATE_SPECS,
+        )
+    if profile == "typescript":
+        return (
+            TYPESCRIPT_BASE_TEMPLATE_SPECS,
+            TYPESCRIPT_GITHUB_TEMPLATE_SPECS,
+            TYPESCRIPT_GITLAB_TEMPLATE_SPECS,
+        )
+    if profile == "monorepo":
+        return (
+            MONOREPO_BASE_TEMPLATE_SPECS,
+            MONOREPO_GITHUB_TEMPLATE_SPECS,
+            MONOREPO_GITLAB_TEMPLATE_SPECS,
+        )
+    return PACKAGE_BASE_TEMPLATE_SPECS, PACKAGE_GITHUB_TEMPLATE_SPECS, PACKAGE_GITLAB_TEMPLATE_SPECS
 
 
 def render_package_files(

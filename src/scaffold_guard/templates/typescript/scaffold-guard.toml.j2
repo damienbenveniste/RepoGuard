@@ -1,0 +1,68 @@
+[project]
+name = "{{ project_slug }}"
+package = "{{ package_name }}"
+profile = "typescript"
+python_min = "{{ python_min }}"
+coverage_fail_under = {{ coverage }}
+ci = "{{ ci_provider }}"
+
+[agents]
+codex = {{ codex_enabled }}
+claude = {{ claude_enabled }}
+cursor = {{ cursor_enabled }}
+
+[features]
+docs = false
+github_actions = {{ github_actions_enabled }}
+gitlab_ci = {{ gitlab_ci_enabled }}
+mkdocs = false
+python = false
+typescript = true
+
+[tools]
+ruff = false
+mypy = false
+pyright = false
+typescript = true
+typescript_strict = {{ typescript_strict_enabled }}
+biome = {{ biome_enabled }}
+vitest = {{ vitest_enabled }}
+
+[policy]
+forbid_type_ignore = true
+forbid_pyright_ignore = false
+forbid_noqa = true
+forbid_any = true
+forbid_dict_str_any = false
+forbid_shell_true = true
+require_tests_for_src_changes = true
+require_docs_for_public_api_changes = true
+require_lockfile_for_dependency_changes = true
+
+[validation]
+quick = [
+{% if use_biome %}
+  "npm run format:check",
+  "npm run lint",
+{% endif %}
+  "npm run typecheck",
+{% if use_vitest %}
+  "npm test",
+{% endif %}
+  "scaffold-guard check"
+]
+full = [
+{% if use_biome %}
+  "npm run format:check",
+  "npm run lint",
+{% endif %}
+  "npm run typecheck",
+{% if use_vitest %}
+  "npm test",
+{% endif %}
+  "npm run build",
+{% if use_vitest %}
+  "npm run coverage",
+{% endif %}
+  "scaffold-guard check"
+]
