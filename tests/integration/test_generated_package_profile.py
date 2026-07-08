@@ -18,12 +18,14 @@ from scaffold_guard.cli import app
 
 SUCCESS = 0
 CONFIG_ERROR = 2
+FULL_COVERAGE = 100
 
 BASE_PACKAGE_FILES = {
     Path("AGENTS.md"),
     Path("README.md"),
     Path("LICENSE"),
     Path("pyproject.toml"),
+    Path("mkdocs.yml"),
     Path("pyrightconfig.json"),
     Path(".gitignore"),
     Path(".github/workflows/ci.yml"),
@@ -115,8 +117,15 @@ def test_init_codex_generates_valid_package_tree(
     assert not (project_dir / "CLAUDE.md").exists()
     assert not (project_dir / ".claude").exists()
     assert not (project_dir / ".cursor").exists()
+    pyproject = tomllib.loads((project_dir / "pyproject.toml").read_text(encoding="utf-8"))
     config = tomllib.loads((project_dir / "scaffold-guard.toml").read_text(encoding="utf-8"))
+    mkdocs_config = (project_dir / "mkdocs.yml").read_text(encoding="utf-8")
+    assert pyproject["tool"]["ruff"]["target-version"] == "py313"
+    assert pyproject["tool"]["mypy"]["python_version"] == "3.13"
     assert config["project"]["profile"] == "python"
+    assert 'site_name: "demo"' in mkdocs_config
+    assert "docs_dir: docs" in mkdocs_config
+    assert "  - Home: index.md" in mkdocs_config
     assert "Created ScaffoldGuard python project: demo" in result.output
     assert "Codex: AGENTS.md" in result.output
     agents = (project_dir / "AGENTS.md").read_text(encoding="utf-8")
@@ -195,6 +204,64 @@ def test_init_can_generate_python_gitlab_ci_project(
     assert "uv run pytest tests --cov=demo" in gitlab_ci
 
 
+def test_init_python_license_none_omits_pyproject_license_metadata(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The Python profile omits invalid package license metadata for no-license projects."""
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(
+        app,
+        ["init", "demo", "--profile", "python", "--agent", "codex", "--license", "none"],
+    )
+
+    assert result.exit_code == SUCCESS, result.output
+    project_dir = tmp_path / "demo"
+    pyproject = tomllib.loads((project_dir / "pyproject.toml").read_text(encoding="utf-8"))
+    package_json_path = project_dir / "package.json"
+
+    assert "license" not in pyproject["project"]
+    assert "No license selected." in (project_dir / "LICENSE").read_text(encoding="utf-8")
+    assert not package_json_path.exists()
+
+
+def test_init_python_profile_python_min_controls_tool_configs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Non-interactive Python generation propagates python_min to tool config."""
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "init",
+            "demo",
+            "--profile",
+            "python",
+            "--agent",
+            "codex",
+            "--python-min",
+            "3.14",
+            "--coverage",
+            str(FULL_COVERAGE),
+        ],
+    )
+
+    assert result.exit_code == SUCCESS, result.output
+    project_dir = tmp_path / "demo"
+    pyproject = tomllib.loads((project_dir / "pyproject.toml").read_text(encoding="utf-8"))
+    config = tomllib.loads((project_dir / "scaffold-guard.toml").read_text(encoding="utf-8"))
+
+    assert pyproject["project"]["requires-python"] == ">=3.14"
+    assert pyproject["tool"]["ruff"]["target-version"] == "py314"
+    assert pyproject["tool"]["mypy"]["python_version"] == "3.14"
+    assert pyproject["tool"]["coverage"]["report"]["fail_under"] == FULL_COVERAGE
+    assert config["project"]["python_min"] == "3.14"
+    assert config["project"]["coverage_fail_under"] == FULL_COVERAGE
+
+
 def test_init_can_generate_typescript_profile(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -215,6 +282,7 @@ def test_init_can_generate_typescript_profile(
     assert not (project_dir / ".cursor").exists()
     package_json = json.loads((project_dir / "package.json").read_text(encoding="utf-8"))
     config = tomllib.loads((project_dir / "scaffold-guard.toml").read_text(encoding="utf-8"))
+    _assert_json_has_no_blank_lines(project_dir / "package.json")
     assert package_json["scripts"]["typecheck"] == "tsc --noEmit"
     assert package_json["devDependencies"]["@biomejs/biome"].startswith("^2.")
     assert config["project"]["profile"] == "typescript"
@@ -223,6 +291,38 @@ def test_init_can_generate_typescript_profile(
     assert "npm install" in result.output
     assert "uv sync --all-groups" not in result.output
     _assert_no_unresolved_project_placeholders(project_dir)
+
+
+def test_init_typescript_profile_biome_package_json_is_formatted_without_vitest(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Biome-enabled TypeScript scaffolds keep package.json formatter-clean without Vitest."""
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "init",
+            "demo",
+            "--profile",
+            "typescript",
+            "--agent",
+            "codex",
+            "--typescript-lint",
+            "biome",
+            "--typescript-test",
+            "off",
+        ],
+    )
+
+    assert result.exit_code == SUCCESS, result.output
+    project_dir = tmp_path / "demo"
+    package_json = json.loads((project_dir / "package.json").read_text(encoding="utf-8"))
+
+    _assert_json_has_no_blank_lines(project_dir / "package.json")
+    assert set(package_json["scripts"]) == {"format", "format:check", "lint", "typecheck", "build"}
+    assert set(package_json["devDependencies"]) == {"@biomejs/biome", "typescript"}
 
 
 def test_init_typescript_profile_can_disable_optional_tools(
@@ -260,6 +360,7 @@ def test_init_typescript_profile_can_disable_optional_tools(
     agents = (project_dir / "AGENTS.md").read_text(encoding="utf-8")
     config = tomllib.loads((project_dir / "scaffold-guard.toml").read_text(encoding="utf-8"))
 
+    _assert_json_has_no_blank_lines(project_dir / "package.json")
     assert Path("biome.json") not in files
     assert Path("vitest.config.ts") not in files
     assert Path("tests/index.test.ts") not in files
@@ -324,6 +425,8 @@ def test_init_can_generate_python_typescript_monorepo_profile(
     biome_json = json.loads((project_dir / "biome.json").read_text(encoding="utf-8"))
     config = tomllib.loads((project_dir / "scaffold-guard.toml").read_text(encoding="utf-8"))
     assert 'packages = ["packages/python/src/demo"]' in pyproject
+    _assert_json_has_no_blank_lines(project_dir / "package.json")
+    _assert_json_has_no_blank_lines(project_dir / "packages/typescript/package.json")
     assert package_json["workspaces"] == ["packages/typescript"]
     assert package_json["scripts"]["ts:typecheck"].startswith("tsc -p packages/typescript")
     assert biome_json["files"]["includes"] == [
@@ -338,6 +441,68 @@ def test_init_can_generate_python_typescript_monorepo_profile(
     assert "npm install" in result.output
     _assert_no_unresolved_project_placeholders(project_dir)
     _assert_python_files_compile(project_dir)
+
+
+def test_init_monorepo_license_none_omits_python_pyproject_license_metadata(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The monorepo profile keeps Python metadata buildable when no license is selected."""
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(
+        app,
+        ["init", "demo", "--profile", "monorepo", "--agent", "codex", "--license", "none"],
+    )
+
+    assert result.exit_code == SUCCESS, result.output
+    project_dir = tmp_path / "demo"
+    pyproject = tomllib.loads((project_dir / "pyproject.toml").read_text(encoding="utf-8"))
+    root_package_json = json.loads((project_dir / "package.json").read_text(encoding="utf-8"))
+    workspace_package_json = json.loads(
+        (project_dir / "packages/typescript/package.json").read_text(encoding="utf-8")
+    )
+
+    assert "license" not in pyproject["project"]
+    assert "license" not in root_package_json
+    assert "license" not in workspace_package_json
+    assert "No license selected." in (project_dir / "LICENSE").read_text(encoding="utf-8")
+
+
+def test_init_monorepo_python_min_controls_python_tool_configs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Non-interactive monorepo generation propagates python_min to Python tool config."""
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "init",
+            "demo",
+            "--profile",
+            "monorepo",
+            "--agent",
+            "codex",
+            "--python-min",
+            "3.14",
+            "--coverage",
+            str(FULL_COVERAGE),
+        ],
+    )
+
+    assert result.exit_code == SUCCESS, result.output
+    project_dir = tmp_path / "demo"
+    pyproject = tomllib.loads((project_dir / "pyproject.toml").read_text(encoding="utf-8"))
+    config = tomllib.loads((project_dir / "scaffold-guard.toml").read_text(encoding="utf-8"))
+
+    assert pyproject["project"]["requires-python"] == ">=3.14"
+    assert pyproject["tool"]["ruff"]["target-version"] == "py314"
+    assert pyproject["tool"]["mypy"]["python_version"] == "3.14"
+    assert pyproject["tool"]["coverage"]["report"]["fail_under"] == FULL_COVERAGE
+    assert config["project"]["python_min"] == "3.14"
+    assert config["project"]["coverage_fail_under"] == FULL_COVERAGE
 
 
 def test_init_monorepo_profile_can_disable_typescript_optional_tools(
@@ -372,6 +537,8 @@ def test_init_monorepo_profile_can_disable_typescript_optional_tools(
     agents = (project_dir / "AGENTS.md").read_text(encoding="utf-8")
     config = tomllib.loads((project_dir / "scaffold-guard.toml").read_text(encoding="utf-8"))
 
+    _assert_json_has_no_blank_lines(project_dir / "package.json")
+    _assert_json_has_no_blank_lines(project_dir / "packages/typescript/package.json")
     assert Path("biome.json") not in files
     assert Path("packages/typescript/vitest.config.ts") not in files
     assert Path("packages/typescript/tests/index.test.ts") not in files
@@ -921,6 +1088,12 @@ def _assert_no_unresolved_project_placeholders(project_dir: Path) -> None:
         assert "{{ package_" not in text
         assert "{{ coverage" not in text
         assert "{%" not in text
+
+
+def _assert_json_has_no_blank_lines(path: Path) -> None:
+    """Fail when generated JSON contains blank lines rejected by Biome formatting."""
+    text = path.read_text(encoding="utf-8")
+    assert "\n\n" not in text
 
 
 def _assert_python_files_compile(project_dir: Path) -> None:

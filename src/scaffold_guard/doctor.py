@@ -97,13 +97,25 @@ def _executable_check(name: str) -> DoctorCheck:
 
 def _project_root_check(root: Path) -> DoctorCheck:
     """Report whether the target path exists as a directory."""
+    if root.is_dir():
+        return DoctorCheck(
+            id="project-root",
+            ok=True,
+            severity="error",
+            message=f"Project root detected: {root}",
+        )
+    if root.exists():
+        return DoctorCheck(
+            id="project-root",
+            ok=False,
+            severity="error",
+            message=f"Project root is not a directory: {root}",
+        )
     return DoctorCheck(
         id="project-root",
-        ok=root.exists() and root.is_dir(),
+        ok=False,
         severity="error",
-        message=f"Project root detected: {root}"
-        if root.is_dir()
-        else f"Project root missing: {root}",
+        message=f"Project root missing: {root}",
     )
 
 
@@ -241,6 +253,13 @@ def _generated_project_checks(root: Path) -> tuple[DoctorCheck, ...]:
 
 def _git_repository_check(root: Path) -> DoctorCheck:
     """Report whether the project is inside a git repository."""
+    if not root.is_dir():
+        return DoctorCheck(
+            id="git-repository",
+            ok=False,
+            severity="warning",
+            message="Project root is not a directory; repository status could not be checked.",
+        )
     git_path = shutil.which("git")
     if git_path is None:
         return DoctorCheck(

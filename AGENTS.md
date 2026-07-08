@@ -80,39 +80,42 @@ configuration change in this repository.
 
 ## Delegation, Subagents, and MCP
 
-- For every non-trivial implementation task, delegate implementation to at
-  least one worker subagent before substantial local edits whenever subagent
-  tooling is available. When a clean implementation slice exists, at least one
-  worker subagent must own that slice and make the edits. Use multiple
-  subagents in parallel when the work has separable concerns such as code
-  mapping, template changes, docs, tests, or independent review.
+- For every non-trivial implementation task, worker delegation is mandatory
+  whenever subagent tooling is available. Before substantial local edits, assign
+  at least one worker subagent a concrete implementation slice with explicit
+  file or module ownership and expected edits.
+- Implementation workers must own edit-bearing slices such as modules,
+  templates, tests, docs, configuration, or focused bug fixes. Read-only
+  exploration, mapping, audit, or review can support implementation work, but it
+  does not satisfy the delegation requirement unless the task is tiny or cannot
+  be delegated cleanly.
+- Use multiple subagents in parallel when the work has separable concerns such
+  as code mapping, template changes, docs, tests, or independent review.
 - Keep the main thread as coordinator and available for user coordination and
   new requests. The main thread owns scope, instruction interpretation,
   integration decisions, final validation, and user communication; worker
   subagents own assigned implementation slices.
-- Do not spawn a worker and then immediately block the main thread on a long
-  wait. After delegation, continue useful non-overlapping coordination work,
-  use short opportunistic checks for worker results, and only wait when the
-  next integration step is truly blocked.
+- Do not spawn a worker and then leave the main thread idle. After delegation,
+  continue useful non-overlapping coordination, integration planning, review of
+  existing diffs, validation setup, or user-facing work. Use short
+  opportunistic checks for worker results, and only wait when the next
+  integration step is truly blocked.
 - Assign every worker subagent concrete ownership: files, modules, templates,
   docs, tests, or another explicit responsibility. Tell workers they are not
   alone in the codebase and must not revert unrelated edits.
-- Use read-only briefs for mapping, test-gap discovery, documentation sweeps,
-  and review. For broad implementation work, using only a read-only or audit
-  subagent is not sufficient unless the implementation is tiny or cannot be
-  cleanly delegated; an explorer or read-only audit alone does not satisfy the
-  delegation rule. Use worker briefs for disjoint implementation slices when
-  edits can be separated cleanly.
+- Use read-only briefs only for supporting work such as mapping, test-gap
+  discovery, documentation sweeps, and review. For implementation work, an
+  explorer or read-only audit alone does not satisfy the delegation rule.
 - Give each subagent a narrow brief with expected output: concrete file paths,
   risks, changed files if any, and recommended tests. Do not ask for broad
   summaries.
 - Do not let the main thread take over a worker-owned implementation slice
   unless the worker is blocked, the slice proves too small to delegate, or the
   user redirects the work.
-- If the main thread must implement locally, state the reason before making
-  local edits and repeat it in the final response. Acceptable reasons are
-  limited to unavailable subagent tooling, a tiny single-file edit, or a task
-  that is purely a direct user question with no repo change.
+- If the main thread must implement locally because a worker is blocked,
+  subagent tooling is unavailable, the edit is tiny or urgent, or the task is a
+  direct user question with no repo change, state the reason before making local
+  edits and repeat it in the final response.
 - Do not delegate interpretation of repository instructions, selected skills,
   security-sensitive changes, release decisions, or final completion claims.
   The main agent owns those.

@@ -336,11 +336,23 @@ def test_project_health_respects_disabled_docs_and_ci(tmp_path: Path) -> None:
         "github_actions = false",
     )
     _remove_tree(project_dir / "docs")
+    (project_dir / "mkdocs.yml").unlink()
     _remove_tree(project_dir / ".github")
 
     result = check_project_health(project_dir)
 
     assert result.ok
+
+
+def test_project_health_requires_mkdocs_config_when_docs_enabled(tmp_path: Path) -> None:
+    """Docs-enabled Python projects require the MkDocs configuration file."""
+    project_dir = _generated_project(tmp_path)
+    (project_dir / "mkdocs.yml").unlink()
+
+    result = check_project_health(project_dir)
+
+    assert not result.ok
+    assert any(finding.path == "mkdocs.yml" for finding in result.findings)
 
 
 def test_project_health_requires_gitlab_ci_file_for_gitlab_projects(tmp_path: Path) -> None:

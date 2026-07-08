@@ -135,6 +135,7 @@ my_project/
   README.md
   LICENSE
   pyproject.toml
+  mkdocs.yml
   pyrightconfig.json  # when Pyright is enabled
   scaffold-guard.toml
   .github/workflows/  # or .gitlab-ci.yml
