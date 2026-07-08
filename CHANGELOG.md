@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.2 - 2026-07-08
+
+- Allowed `scaffold-guard init` to initialize an existing directory when its
+  existing files do not conflict with planned generated destinations.
+- Kept generated-file overwrite protection strict: existing generated
+  destinations still require `--force`, and ScaffoldGuard stops before partial
+  writes.
+- Added regression coverage for guided current-directory initialization with an
+  unrelated existing plan file.
+- Added a dedicated command reference page and linked it from public docs.
+- Removed the obsolete V1 implementation plan file from the repository.
+
 ## 0.1.1 - 2026-07-08
 
 - Updated public docs to present the installed `scaffold-guard` command and
